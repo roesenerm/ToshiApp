@@ -391,6 +391,6 @@ def profile():
 	return render_template('profile.html', my_address=my_address, utxos=utxos, error=error)
 
 if __name__ == '__main__':
-	#app.run(debug=True)
-	app.run()
+	app.run(debug=True)
+	#app.run()
 
