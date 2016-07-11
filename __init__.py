@@ -320,15 +320,22 @@ def check_ticket():
 		headers = {'Content-Type':'application/json'}
 		asset_id = request.form['asset_id']
 		tx_id = request.form['tx_id']
-		utxo = tx_id + ':1'
-		r = requests.get('http://testnet.api.coloredcoins.org:80/v3/assetmetadata/'+asset_id+'/'+utxo)
-		response = r.json()
-		asset_id = response['assetId']
-		ticket_name = response['metadataOfIssuence']['data']['assetName']
-		description = response['metadataOfIssuence']['data']['description']
-		price = response['metadataOfIssuence']['data']['userData']['meta'][0]['price']
-		image = response['metadataOfIssuence']['data']['userData']['meta'][1]['image']
-		return render_template("ticket.html", asset_id=asset_id, ticket_name=ticket_name, description=description, image=image, price=price, error=error)
+		for index in range(0,5):
+			utxo = tx_id + ':' + str(index)
+			endpoint = 'http://testnet.api.coloredcoins.org:80/v3/assetmetadata/' + asset_id + '/' + utxo
+			r = requests.get(endpoint)
+			if (r.status_code) != 200:
+				error = 'Incorrect Ticket ID or Transaction ID'
+				pass
+			else:
+				response = r.json()
+				bitcoin_address = response['issueAddress']
+				asset_id = response['assetId']
+				ticket_name = response['metadataOfIssuence']['data']['assetName']
+				description = response['metadataOfIssuence']['data']['description']
+				price = response['metadataOfIssuence']['data']['userData']['meta'][0]['price']
+				image = response['metadataOfIssuence']['data']['userData']['meta'][1]['image']
+				return render_template("ticket.html", asset_id=asset_id, ticket_name=ticket_name, description=description, image=image, price=price, error=error)
 	return render_template('check_ticket.html', error=error)
 
 @app.route('/<asset_id>', methods=['GET', 'POST'])
@@ -390,6 +397,6 @@ def profile():
 	return render_template('profile.html', my_address=my_address, utxos=utxos, error=error)
 
 if __name__ == '__main__':
-	#app.run(debug=True)
-	app.run()
+	app.run(debug=True)
+	#app.run()
 
