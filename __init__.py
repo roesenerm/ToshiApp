@@ -66,7 +66,6 @@ def create_account(brainwallet_password):
 
 # Sign up using a sha256 encrpyted brain wallet password
 @app.route('/signup', methods=['GET', 'POST'])
-@login_required
 def signup():
 	error = None
 	if request.method == 'POST':
