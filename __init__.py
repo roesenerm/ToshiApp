@@ -97,7 +97,10 @@ def home():
 	return render_template('cover.html')
 
 # Search
+@app.route('/search', methods=['GET', 'POST'])
+@login_required
 def search():
+	error = None
 	if request.method == 'POST':
 		search = request.form['search']
 		if search != '':
@@ -107,24 +110,35 @@ def search():
 	else:
 		posts = handle.posts.find()
 
+	for post in posts:
+		bitcoin_address = post['bitcoin_address']
+		asset_id = post['asset_id']
+		tx_id = post['tx_id'][0]['txid']
+		for index in range(0,5):
+			utxo = tx_id+':'+str(index)
+			endpoint = 'http://testnet.api.coloredcoins.org:80/v3/assetmetadata/'+asset_id+'/'+utxo
+			r = requests.get(endpoint)
+			if (r.status_code) != 200:
+				pass
+			else:
+				response = r.json()
+				asset_id = response['assetId']
+				ticket_name = response['metadataOfIssuence']['data']['assetName']
+				description = response['metadataOfIssuence']['data']['description']
+				price = response['metadataOfIssuence']['data']['userData']['meta'][0]['price']
+				image = response['metadataOfIssuence']['data']['userData']['meta'][1]['image']
+	return render_template("ticket.html", asset_id=asset_id, bitcoin_address=bitcoin_address, ticket_name=ticket_name, description=description, image=image, price=price, error=error)
+
 # Explore Page
 @app.route('/explore', methods=['GET', 'POST'])
 @login_required
 def explore():
-	error=None
+	error = None
 	meta_data = []
-	if request.method == 'POST':
-		search = request.form['search']
-		if search != '':
-			posts = handle.posts.find({'asset_id':str(search)})
-		else:
-			posts = handle.posts.find()
-	else:
-		posts = handle.posts.find()
+	posts = handle.posts.find()
 	for post in posts:
 		bitcoin_address = post['bitcoin_address']
 		asset_id = post['asset_id']
-		# Updated json
 		tx_id = post['tx_id'][0]['txid']
 		for index in range(0,5):
 			utxo = tx_id+':'+str(index)
@@ -174,9 +188,6 @@ def issue():
 		ticket_price = float(request.form['ticket_price'])
 		ticket_name = request.form['ticket_name']
 		passphrase = request.form['private_key']
-		# Fake test address
-		#my_address = 'mpoFcgnmVj7puZhXezXZh7yHLXnaggzaqD'
-		# Fake test address
 		payload = {
 			'issueAddress':my_address,
 			'amount':issued_amount,
@@ -201,9 +212,6 @@ def issue():
 			response = r.json()
 			if str(r) == '<Response [200]>':
 				tx_key = accounts.find_one({'username':username})['priv']
-				# Fake private key
-				#tx_key = 'L52uVpNaHimS5QqYzntGEkYugKp5eXwrDkbrwnXhonu7dvR9zFTc'
-				# Fake private key
 				tx_hex = str(response['txHex'])
 				asset_id = response['assetId']
 				signed_tx = sign_tx(tx_hex, tx_key)
@@ -296,9 +304,6 @@ def transfer():
 			error = 'Invalid Private Passphrase. Please try again.'
 		else:
 			private_key = accounts.find_one({'username':username})['priv']
-			# Fake private Key
-			#private_key = 'L52uVpNaHimS5QqYzntGEkYugKp5eXwrDkbrwnXhonu7dvR9zFTc'
-			# Fake private Key
 			payload = {'fee': 5000, 'from': [from_address], 'to':[{'address':to_address,'amount': transfer_amount, 'assetId' : asset_id}]}
 			r = requests.post('http://testnet.api.coloredcoins.org:80/v3/sendasset', data=json.dumps(payload), headers={'Content-Type':'application/json'})
 			response = r.json()
@@ -326,7 +331,6 @@ def check_ticket_issuer():
 		response = r.json()
 		bitcoin_address = response['address']
 		utxos = response['utxos']
-		# Changed the html code added another for loop
 		return render_template("ticket_issuer.html", bitcoin_address=bitcoin_address, utxos=utxos, error=error)
 	return render_template('check_ticket_issuer.html', error=error)
 
@@ -373,7 +377,6 @@ def ticket_id(asset_id):
 		error = 'No asset ID found.'
 	else:
 		data = posts.find_one({'asset_id':asset_id})
-		#Updated JSON
 		tx_id = data['tx_id'][0]['txid']
 		for index in range(0,5):
 			utxo = tx_id + ':' + str(index)
@@ -415,6 +418,6 @@ def profile():
 	return render_template('profile.html', my_address=my_address, utxos=utxos, error=error)
 
 if __name__ == '__main__':
-	app.run(debug=True)
-	#app.run()
+	#app.run(debug=True)
+	app.run()
 

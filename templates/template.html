@@ -36,7 +36,7 @@
           </ul>
         </li>
       </ul>
-      <form class="navbar-form navbar-left" role="search" method='post' action={{ url_for('explore') }}>
+      <form class="navbar-form navbar-left" role="search" method='post' action={{ url_for('search') }}>
         <div class="form-group">
           <input type="text" class="form-control" placeholder="Search for Ticket ID" name="search" value="{{request.form.search}}">
         </div>
