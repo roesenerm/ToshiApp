@@ -96,6 +96,17 @@ def beta_sign_up():
 def home():
 	return render_template('cover.html')
 
+# Search
+def search():
+	if request.method == 'POST':
+		search = request.form['search']
+		if search != '':
+			posts = handle.posts.find({'asset_id':str(search)})
+		else:
+			posts = handle.posts.find()
+	else:
+		posts = handle.posts.find()
+
 # Explore Page
 @app.route('/explore', methods=['GET', 'POST'])
 @login_required
@@ -110,7 +121,6 @@ def explore():
 			posts = handle.posts.find()
 	else:
 		posts = handle.posts.find()
-
 	for post in posts:
 		bitcoin_address = post['bitcoin_address']
 		asset_id = post['asset_id']
