@@ -101,8 +101,16 @@ def home():
 @login_required
 def explore():
 	error=None
-	posts = handle.posts.find()
 	meta_data = []
+	if request.method == 'POST':
+		search = request.form['search']
+		if search != '':
+			posts = handle.posts.find({'asset_id':str(search)})
+		else:
+			posts = handle.posts.find()
+	else:
+		posts = handle.posts.find()
+
 	for post in posts:
 		bitcoin_address = post['bitcoin_address']
 		asset_id = post['asset_id']
