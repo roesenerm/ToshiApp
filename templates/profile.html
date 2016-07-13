@@ -11,7 +11,7 @@
         {% for tx in utxos %}
           {% for a in tx.assets %}
           <h3>Transaction ID: {{ tx.txid }}</h3>
-          <h3>My Ticket ID: {{ a.assetId }}</h3>
+          <h3>Ticket ID: <a href="/{{a.assetId}}">{{ a.assetId }}</a></h3>
           <h3>Tickets I Own: {{ a.amount }}</h3>
           <br>
           {% endfor %}
