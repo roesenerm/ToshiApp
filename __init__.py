@@ -4,10 +4,20 @@ from pymongo import MongoClient
 from bitcoin import *
 from passlib.hash import sha256_crypt
 import requests
+from flask_mail import Mail, Message
 
 app = Flask(__name__)
 
 app.secret_key = 'password'
+
+app.config['MAIL_SERVER'] = 'smtp.gmail.com'
+app.config['MAIL_PORT'] = 465
+app.config['MAIL_USE_TLS'] = False
+app.config['MAIL_USE_SSL'] = True
+app.config['MAIL_USERNAME'] = 'ticket.toshi@gmail.com'
+app.config['MAIL_PASSWORD'] = 'namoku8807'
+
+mail = Mail(app)
 
 def connect():
 	connection = MongoClient('ds049935.mlab.com', 49935)
@@ -62,7 +72,11 @@ def create_account(brainwallet_password):
 	pub = privtopub(priv)
 	addr = pubtoaddr(pub, 111)
 
-	return priv, addr, password_on_server
+	wallet_priv = random_key()
+	wallet_pub = privtopub(wallet_priv)
+	wallet_addr = pubtoaddr(pub, 111)
+
+	return priv, addr, password_on_server, wallet_priv, wallet_addr
 
 # Sign up using a sha256 encrpyted brain wallet password
 @app.route('/signup', methods=['GET', 'POST'])
@@ -75,10 +89,13 @@ def signup():
 		if brainwallet_password != confirm_brainwallet_password:
 			error = 'Passwords not the same. Please try again.'
 		else:
-			priv, addr, password_on_server = create_account(brainwallet_password)
+			priv, addr, password_on_server, wallet_priv, wallet_addr = create_account(brainwallet_password)
 			accounts.insert({'username':username, 'priv':priv, 'my_address':addr, 'password':password_on_server})
 			session['logged_in'] = True
 			session['username'] = username
+			msg = Message('ToshiTicket Account', sender='ticket.toshi@gmail.com', recipients=[username])
+			msg.html = render_template('account_email.html', wallet_addr=wallet_addr, wallet_priv=wallet_priv)
+			mail.send(msg)
 		return redirect(url_for('explore'))
 	return render_template('signup.html', error=error)
 
