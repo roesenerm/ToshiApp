@@ -94,7 +94,7 @@ def signup():
 			session['logged_in'] = True
 			session['username'] = username
 			msg = Message('ToshiTicket Account', sender='ticket.toshi@gmail.com', recipients=[username])
-			msg.html = render_template('account_email.html', wallet_addr=wallet_addr, wallet_priv=wallet_priv)
+			msg.html = render_template('account_email.html', addr=addr, wallet_addr=wallet_addr, wallet_priv=wallet_priv)
 			mail.send(msg)
 		return redirect(url_for('explore'))
 	return render_template('signup.html', error=error)
