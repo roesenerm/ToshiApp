@@ -74,7 +74,7 @@ def create_account(brainwallet_password):
 
 	wallet_priv = random_key()
 	wallet_pub = privtopub(wallet_priv)
-	wallet_addr = pubtoaddr(pub, 111)
+	wallet_addr = pubtoaddr(wallet_pub, 111)
 
 	return priv, addr, password_on_server, wallet_priv, wallet_addr
 
