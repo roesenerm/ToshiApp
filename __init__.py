@@ -10,8 +10,8 @@ app = Flask(__name__)
 app.secret_key = 'password'
 
 def connect():
-	connection = MongoClient('ds011735.mlab.com', 11735)
-	handle = connection['dbthree']
+	connection = MongoClient('ds049935.mlab.com', 49935)
+	handle = connection['dbfour']
 	handle.authenticate('matthewroesener', 'toshihawaii')
 	return handle
 
@@ -128,7 +128,7 @@ def search():
 				price = response['metadataOfIssuence']['data']['userData']['meta'][0]['price']
 				image = response['metadataOfIssuence']['data']['userData']['meta'][1]['image']
 	return render_template("ticket.html", asset_id=asset_id, bitcoin_address=bitcoin_address, ticket_name=ticket_name, description=description, image=image, price=price, error=error)
-
+'''
 # Explore Page
 @app.route('/explore', methods=['GET', 'POST'])
 @login_required
@@ -156,6 +156,13 @@ def explore():
 				data = {'bitcoin_address':bitcoin_address, 'asset_id':asset_id, 'ticket_name':ticket_name, 'description':description, 'price':price, 'image':image}
 				meta_data.append(data)
 	return render_template('explore.html', posts=posts, meta_data=meta_data, error=error)
+'''
+@app.route('/explore', methods=['GET', 'POST'])
+@login_required
+def explore():
+	error = None
+	posts = handle.posts.find()
+	return render_template('explore2.html', posts=posts, error=error)
 
 def sign_tx(tx_hex, tx_key):
 	tx_structure = deserialize(tx_hex)
@@ -216,8 +223,10 @@ def issue():
 				asset_id = response['assetId']
 				signed_tx = sign_tx(tx_hex, tx_key)
 				tx_id = broadcast_tx(signed_tx)
-				# Need to check output
-				posts.insert({'bitcoin_address':my_address, 'asset_id':asset_id, 'tx_id':tx_id})
+				# Version dbthree
+				#posts.insert({'bitcoin_address':my_address, 'asset_id':asset_id, 'tx_id':tx_id})
+				# Version dbfour
+				posts.insert({'bitcoin_address':my_address, 'issued_amount':issued_amount, 'asset_id':asset_id, 'tx_id':tx_id, 'ticket_name':ticket_name, 'description':description, 'ticket_price':ticket_price, 'image':image})
 				return render_template('issuance.html', ticket_name=ticket_name, image=image, ticket_price=ticket_price, description=description, issued_amount=issued_amount)
 			else:
 				error = 'Error issuing ticket. Not enough funds to cover issue.'
@@ -418,6 +427,6 @@ def profile():
 	return render_template('profile.html', my_address=my_address, utxos=utxos, error=error)
 
 if __name__ == '__main__':
-	#app.run(debug=True)
-	app.run()
+	app.run(debug=True)
+	#app.run()
 
