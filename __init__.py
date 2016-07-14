@@ -127,24 +127,28 @@ def search():
 	else:
 		posts = handle.posts.find()
 
-	for post in posts:
-		bitcoin_address = post['bitcoin_address']
-		asset_id = post['asset_id']
-		tx_id = post['tx_id'][0]['txid']
-		for index in range(0,5):
-			utxo = tx_id+':'+str(index)
-			endpoint = 'http://testnet.api.coloredcoins.org:80/v3/assetmetadata/'+asset_id+'/'+utxo
-			r = requests.get(endpoint)
-			if (r.status_code) != 200:
-				pass
-			else:
-				response = r.json()
-				asset_id = response['assetId']
-				ticket_name = response['metadataOfIssuence']['data']['assetName']
-				description = response['metadataOfIssuence']['data']['description']
-				price = response['metadataOfIssuence']['data']['userData']['meta'][0]['price']
-				image = response['metadataOfIssuence']['data']['userData']['meta'][1]['image']
-	return render_template("ticket.html", asset_id=asset_id, bitcoin_address=bitcoin_address, ticket_name=ticket_name, description=description, image=image, price=price, error=error)
+	try:
+		for post in posts:
+			bitcoin_address = post['bitcoin_address']
+			asset_id = post['asset_id']
+			tx_id = post['tx_id'][0]['txid']
+			for index in range(0,5):
+				utxo = tx_id+':'+str(index)
+				endpoint = 'http://testnet.api.coloredcoins.org:80/v3/assetmetadata/'+asset_id+'/'+utxo
+				r = requests.get(endpoint)
+				if (r.status_code) != 200:
+					pass
+				else:
+					response = r.json()
+					asset_id = response['assetId']
+					ticket_name = response['metadataOfIssuence']['data']['assetName']
+					description = response['metadataOfIssuence']['data']['description']
+					price = response['metadataOfIssuence']['data']['userData']['meta'][0]['price']
+					image = response['metadataOfIssuence']['data']['userData']['meta'][1]['image']
+		return render_template("ticket.html", asset_id=asset_id, bitcoin_address=bitcoin_address, ticket_name=ticket_name, description=description, image=image, price=price, error=error)
+	except:
+		error = "Incorrect Ticket ID"
+	return redirect(url_for('explore'))
 
 '''
 # Explore Page
