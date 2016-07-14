@@ -128,6 +128,7 @@ def search():
 				price = response['metadataOfIssuence']['data']['userData']['meta'][0]['price']
 				image = response['metadataOfIssuence']['data']['userData']['meta'][1]['image']
 	return render_template("ticket.html", asset_id=asset_id, bitcoin_address=bitcoin_address, ticket_name=ticket_name, description=description, image=image, price=price, error=error)
+
 '''
 # Explore Page
 @app.route('/explore', methods=['GET', 'POST'])
@@ -157,6 +158,7 @@ def explore():
 				meta_data.append(data)
 	return render_template('explore.html', posts=posts, meta_data=meta_data, error=error)
 '''
+
 @app.route('/explore', methods=['GET', 'POST'])
 @login_required
 def explore():
@@ -226,8 +228,11 @@ def issue():
 				# Version dbthree
 				#posts.insert({'bitcoin_address':my_address, 'asset_id':asset_id, 'tx_id':tx_id})
 				# Version dbfour
-				posts.insert({'bitcoin_address':my_address, 'issued_amount':issued_amount, 'asset_id':asset_id, 'tx_id':tx_id, 'ticket_name':ticket_name, 'description':description, 'ticket_price':ticket_price, 'image':image})
-				return render_template('issuance.html', ticket_name=ticket_name, image=image, ticket_price=ticket_price, description=description, issued_amount=issued_amount)
+				if tx_id:
+					posts.insert({'bitcoin_address':my_address, 'issued_amount':issued_amount, 'asset_id':asset_id, 'tx_id':tx_id, 'ticket_name':ticket_name, 'description':description, 'ticket_price':ticket_price, 'image':image})
+					return render_template('issuance.html', ticket_name=ticket_name, image=image, ticket_price=ticket_price, description=description, issued_amount=issued_amount)
+				else:
+					error = 'Error issuing ticket'
 			else:
 				error = 'Error issuing ticket. Not enough funds to cover issue.'
 	return render_template('issue.html', error=error)
