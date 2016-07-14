@@ -6,7 +6,9 @@
     <h1>My Tickets</h1>
     <br>
       <div class = "row">
-        <h3>My Address: {{ my_address }}</h3>
+        <h3>My Account Address: {{ my_address }}</h3>
+        <h3>My Wallet Address: {{ wallet_addr }}</h3>
+        <p>This is where we send your bitcoins for tickets sold.</p>
         <br>
         {% for tx in utxos %}
           {% for a in tx.assets %}

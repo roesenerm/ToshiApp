@@ -90,7 +90,7 @@ def signup():
 			error = 'Passwords not the same. Please try again.'
 		else:
 			priv, addr, password_on_server, wallet_priv, wallet_addr = create_account(brainwallet_password)
-			accounts.insert({'username':username, 'priv':priv, 'my_address':addr, 'password':password_on_server})
+			accounts.insert({'username':username, 'priv':priv, 'my_address':addr, 'password':password_on_server, 'wallet_addr':wallet_addr})
 			session['logged_in'] = True
 			session['username'] = username
 			msg = Message('ToshiTicket Account', sender='ticket.toshi@gmail.com', recipients=[username])
@@ -254,7 +254,7 @@ def issue():
 				error = 'Error issuing ticket. Not enough funds to cover issue.'
 	return render_template('issue.html', error=error)
 
-def swap(my_address, ticket_price, from_address, asset_id, transfer_amount, issuer_private_key, buyer_private_key):
+def swap(my_address, ticket_price, from_address, wallet_addr, asset_id, transfer_amount, issuer_private_key, buyer_private_key):
 	error = None
 	asset_tx_id = None
 	btc_tx_id = None
@@ -271,7 +271,8 @@ def swap(my_address, ticket_price, from_address, asset_id, transfer_amount, issu
 		from_address_satoshis = get_address_balance(from_address)
 		if my_address_satoshis > ticket_price_satoshis and from_address_satoshis > 5000:
 			asset_tx_id, error = transfer_asset(from_address=from_address, to_address=my_address, transfer_amount=transfer_amount, asset_id=asset_id, tx_key=issuer_private_key)
-			#btc_tx_id, error = send_btc(send_to=from_address, ticket_price_satoshis=ticket_price_satoshis, send_from=my_address, tx_key=buyer_private_key)
+			print ("Bitcoin sent to: ", wallet_addr)
+			#btc_tx_id, error = send_btc(send_to=wallet_addr, ticket_price_satoshis=ticket_price_satoshis, send_from=my_address, tx_key=buyer_private_key)
 			btc_tx_id = True
 		else:
 			error = 'Not enough funds to purchase ticket.'
@@ -430,7 +431,8 @@ def ticket_id(asset_id):
 			transfer_amount = int(request.form['transfer_amount'])
 			issuer = accounts.find_one({'my_address':from_address})
 			issuer_private_key = issuer['priv']
-			asset_tx_id, btc_tx_id, error = swap(my_address=my_address, ticket_price=ticket_price, from_address=from_address, asset_id=asset_id, transfer_amount=transfer_amount, issuer_private_key=issuer_private_key, buyer_private_key=buyer_private_key)
+			wallet_addr = issuer['wallet_addr']
+			asset_tx_id, btc_tx_id, error = swap(my_address=my_address, ticket_price=ticket_price, from_address=from_address, wallet_addr=wallet_addr, asset_id=asset_id, transfer_amount=transfer_amount, issuer_private_key=issuer_private_key, buyer_private_key=buyer_private_key)
 			if error == None:
 				return render_template("buy.html", asset_tx_id=asset_tx_id, btc_tx_id=btc_tx_id)
 	return render_template("ticket.html", asset_id=asset_id, bitcoin_address=bitcoin_address, ticket_name=ticket_name, description=description, image=image, price=price, error=error)
@@ -442,11 +444,12 @@ def profile():
 	username = session['username']
 	session_user = accounts.find_one({'username':username})
 	my_address = session_user['my_address']
+	wallet_addr = session_user['wallet_addr']
 	r = requests.get('http://testnet.api.coloredcoins.org:80/v3/addressinfo/'+my_address)
 	response = r.json()
 	bitcoin_address = response['address']
 	utxos = response['utxos']
-	return render_template('profile.html', my_address=my_address, utxos=utxos, error=error)
+	return render_template('profile.html', my_address=my_address, wallet_addr=wallet_addr, utxos=utxos, error=error)
 
 if __name__ == '__main__':
 	app.run(debug=True)
