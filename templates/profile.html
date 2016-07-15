@@ -7,6 +7,7 @@
     <br>
       <div class = "row">
         <h3>My Account Address: {{ my_address }}</h3>
+        <p>This is your ticket issuing address.</p>
         <h3>My Wallet Address: {{ wallet_addr }}</h3>
         <p>This is where we send your bitcoins for tickets sold.</p>
         <br>
@@ -22,7 +23,7 @@
         {% if error %}
             <p class="error"><strong>Error:</strong> {{ error }}</p>
         {% endif %}
-        <h4>(We are currently using the bitcoin testnet for transactions so no real bitcoins are being used. Fund your Account Address below with some test bitcoins at any testnet bitcoin faucet, such as http://tpfaucet.appspot.com/.)</h4>
+        <p>(We are currently using the bitcoin testnet for transactions so no real bitcoins are being used. Fund your Account Address below with some test bitcoins at any testnet bitcoin <a href="/http://tpfaucet.appspot.com/">faucet</a>.)</p>
       </div>
     </div>
   </center>
