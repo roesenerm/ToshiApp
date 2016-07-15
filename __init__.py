@@ -15,7 +15,7 @@ app.config['MAIL_PORT'] = 465
 app.config['MAIL_USE_TLS'] = False
 app.config['MAIL_USE_SSL'] = True
 app.config['MAIL_USERNAME'] = 'ticket.toshi@gmail.com'
-app.config['MAIL_PASSWORD'] = 'namoku8807'
+app.config['MAIL_PASSWORD'] = 'toshihawaii'
 
 mail = Mail(app)
 
