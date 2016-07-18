@@ -1,31 +1,51 @@
 {% extends "template.html" %}
 {% block body %}
 <body>
-  <center>
-    <div class = "container">
-    <h1>My Tickets</h1>
-    <br>
-      <div class = "row">
-        <h3>My Account Address: {{ my_address }}</h3>
-        <p>This is your ticket issuing address. Fund your account address above with some test bitcoins at any testnet bitcoin <a href="http://tpfaucet.appspot.com/">faucet</a>.</p>
-        <h3>My Wallet Address: {{ wallet_addr }}</h3>
-        <p>This is where we send your bitcoins for tickets sold.</p>
-        <br>
-        {% for tx in utxos %}
-          {% for a in tx.assets %}
-          <h3>Transaction ID: {{ tx.txid }}</h3>
-          <h3>Ticket ID: <a href="/{{a.assetId}}">{{ a.assetId }}</a></h3>
-          <h3>Tickets I Own: {{ a.amount }}</h3>
-          <br>
-          {% endfor %}
-        {% endfor %}
-        <br>
-        {% if error %}
-            <p class="error"><strong>Error:</strong> {{ error }}</p>
-        {% endif %}
+  <div class="container">
+    <div class="row">
+      <div class="col-xs-12 col-sm-12 col-md-8 col-lg-7 col-xs-offset-0 col-sm-offset-0 col-md-offset-3 col-lg-offset-3 toppad" >
+        <div class="panel panel-danger">
+          <div class="panel-heading">
+            <h3 class="panel-title">My Account Address: {{my_address}}</h3>
+            <br>
+            <h3 class="panel-title">My Wallet Address: {{wallet_addr}}</h3>
+          </div>
+          <div class="panel-body">
+            <div class="row">
+              <div class=" col-md-9 col-lg-9 "> 
+                <table class="table table-user-information">
+                  <tbody>
+                    {% for tx in utxos %}
+                      {% for a in tx.assets %}
+                        <tr>
+                        <td><b>Transaction ID:</b></td>
+                        </tr>
+                        <tr>
+                        <td>{{ tx.txid }}</td>
+                        </tr>
+                        <tr>
+                        <td><b>Ticket ID:</b></td>
+                        </tr>
+                        <tr>
+                        <td><a href="/{{a.assetId}}">{{ a.assetId }}</a></td>
+                        </tr>
+                        <tr>
+                        <td><b>Tickets I Own:</b></td>
+                        </tr>
+                        <tr>
+                        <td>{{ a.amount }}</td>
+                        </tr>
+                      {% endfor %}
+                    {% endfor %}  
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>   
+        </div>
       </div>
     </div>
-  </center>
+  </div>
 </body>
 
 {% endblock %}
