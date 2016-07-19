@@ -233,10 +233,12 @@ th {
   h3 {
     orphans: 3;
     widows: 3;
+    word-wrap: break-word;
   }
   h2,
   h3 {
     page-break-after: avoid;
+    word-wrap: break-word;
   }
   .navbar {
     display: none;
@@ -1275,6 +1277,7 @@ h2,
 h3,
 .h3 {
   font-size: 24px;
+  word-wrap: break-word;
 }
 h4,
 .h4 {
