@@ -1242,6 +1242,7 @@ h2 .small,
 h3 .small,
 .h3 .small {
   font-size: 65%;
+  word-wrap: break-word;
 }
 h4,
 .h4,
