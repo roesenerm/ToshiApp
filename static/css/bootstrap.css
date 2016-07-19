@@ -233,12 +233,10 @@ th {
   h3 {
     orphans: 3;
     widows: 3;
-    word-wrap: break-word;
   }
   h2,
   h3 {
     page-break-after: avoid;
-    word-wrap: break-word;
   }
   .navbar {
     display: none;
@@ -1227,7 +1225,6 @@ h3,
 .h3 {
   margin-top: 20px;
   margin-bottom: 10px;
-  word-wrap: break-word;
 }
 h1 small,
 .h1 small,
@@ -1242,7 +1239,6 @@ h2 .small,
 h3 .small,
 .h3 .small {
   font-size: 65%;
-  word-wrap: break-word;
 }
 h4,
 .h4,
@@ -1278,7 +1274,6 @@ h2,
 h3,
 .h3 {
   font-size: 24px;
-  word-wrap: break-word;
 }
 h4,
 .h4 {
@@ -1592,6 +1587,7 @@ pre code {
   padding-left: 15px;
   margin-right: auto;
   margin-left: auto;
+  word-wrap: break-word;
 }
 @media (min-width: 768px) {
   .container {
