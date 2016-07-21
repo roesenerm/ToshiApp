@@ -7,7 +7,7 @@
 <body class = "body">
 
 <nav class="navbar navbar-inverse navbar-static-top" role="navigation">
-  <div class="container-fluid">
+  <div class="container">
     <!-- Brand and toggle get grouped for better mobile display -->
     <div class="navbar-header">
       <button type="button" class="navbar-toggle" data-toggle="collapse" data-target="#bs-example-navbar-collapse-1">
@@ -52,20 +52,17 @@
 
       </ul>
     </div><!-- /.navbar-collapse -->
-  </div><!-- /.container-fluid -->
+  </div><!-- /.container -->
 </nav>
 
-    <body>
+    {% block body %}
+    {% endblock %}
 
-        {% block body %}
-        {% endblock %}
-
-        <script src="https://code.jquery.com/jquery-1.11.3.min.js"></script>
-
-    </body>
-
+    <hr>
 
 </body>
+
+<script src="https://code.jquery.com/jquery-1.11.3.min.js"></script>
 
 <script type = "text/javascript" src = "static/js/bootstrap.min.js"></script>
 

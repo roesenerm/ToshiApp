@@ -1,52 +1,58 @@
 {% extends "template.html" %}
 {% block body %}
 <body>
+  <!-- Page Content -->
   <div class="container">
-    <div class="row">
-      <div class="col-xs-12 col-sm-12 col-md-8 col-lg-7 col-xs-offset-0 col-sm-offset-0 col-md-offset-3 col-lg-offset-3 toppad" >
-        <div class="panel panel-danger">
-          <div class="panel-heading">
-            <h1 class="panel-title">My Account Address: {{my_address}}</h1>
-            <br>
-            <h1 class="panel-title">My Wallet Address: {{wallet_addr}}</h1>
+
+      <div class="row">
+
+          <!-- Blog Entries Column -->
+          <div class="col-md-8">
+
+              <h2 class="page-header">
+                  Transactions
+              </h2>
+
+              {% for tx in utxos %}
+
+                <!-- First Transaction  -->
+                <h3>Transaction ID: {{ tx.txid }}</h3>
+                {% for a in tx.assets %}
+                  <h3>
+                      Ticket ID: <a href="/{{a.assetId}}">{{ a.assetId }}</a>
+                  </h3>
+                  <h3>
+                      Ticket I Own: {{ a.amount }}
+                  </h3>
+                  <hr>
+                {% endfor %}
+
+              {% endfor %}
+
           </div>
-          <div class="panel-body">
-            <div class="row">
-              <div class=" col-md-12 col-lg-12 "> 
-                <table class="table table-user-information" style="word-wrap:break-word;
-              table-layout: fixed;">
-                  <tbody>
-                    {% for tx in utxos %}
-                      {% for a in tx.assets %}
-                        <tr>
-                        <td><b>Transaction ID:</b></td>
-                        </tr>
-                        <tr>
-                        <td>{{ tx.txid }}</td>
-                        </tr>
-                        <tr>
-                        <td><b>Ticket ID:</b></td>
-                        </tr>
-                        <tr>
-                        <td><a href="/{{a.assetId}}">{{ a.assetId }}</a></td>
-                        </tr>
-                        <tr>
-                        <td><b>Tickets I Own:</b></td>
-                        </tr>
-                        <tr>
-                        <td>{{ a.amount }}</td>
-                        </tr>
-                      {% endfor %}
-                    {% endfor %}  
-                  </tbody>
-                </table>
+
+          <!-- Blog Sidebar Widgets Column -->
+          <div class="col-md-4">
+
+              <!-- Blog Categories Well -->
+              <div class="well">
+                  <h4>My Account Address: {{my_address}}</h4>
+                  <p>Fund this account with testnet bitcoins <a href="http://tpfaucet.appspot.com/">here</a> to issue tickets.</p>
               </div>
-            </div>
-          </div>   
-        </div>
+
+              <!-- Side Widget Well -->
+              <div class="well">
+                  <h4>My Wallet Address: {{wallet_addr}}</h4>
+                  <p>This is where we send your bitcoins for tickets you have sold.</p>
+              </div>
+
+          </div>
+
       </div>
-    </div>
+      <!-- /.row -->
+
   </div>
+  <!-- /.container -->
 </body>
 
 {% endblock %}
