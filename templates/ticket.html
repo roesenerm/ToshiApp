@@ -1,30 +1,57 @@
 {% extends "template.html" %}
 {% block body %}
 <body>
-    <center>
-    <div class = "container">
-      <h1>Check Ticket Details</h1>
-      <h3>Ticket Owner: {{ bitcoin_address }}</h3>
-      <h3>Ticket ID: {{ asset_id }}</h3>
-      <h3>{{ ticket_name }}</h3>
-      <img src= {{ image }} alt="color qrcode" height="300" width="300">
-      <h3>Price: ${{ price }}</h3>
-      <h3>Description: {{ description }}</h3>
-      {% if error %}
-        <p class="error"><strong>Error:</strong> {{ error }}</p>
-      {% endif %}
-    </div>
-    <form class="form-horizontal" action="" method="post">
-        <p><input type="hidden" placeholder="Bitcoin Address" name="bitcoin_address" value={{ bitcoin_address }}></p>
-        <p><input type="hidden" placeholder="Asset ID" name="asset_id" value={{ asset_id }}></p>
-        <p><input type="hidden" placeholder="Ticket Price" name="ticket_price" value={{ price }}></p>
-        <p><input type="hidden" VALUE="1" SIZE="1" placeholder="1" name="transfer_amount" value="{{request.form.transfer_amount}}"></p>
-        <p><input class="btn btn-custom" type="submit" value="Buy One Ticket"></p>
-    </form>
-    {% if error %}
-      <p class="error"><strong>Error:</strong> {{ error }}</p>
-    {% endif %}
-    </center>
+  <!-- Page Content -->
+  <div class="container">
+
+      <!-- Portfolio Item Heading -->
+      <div class="row">
+          <div class="col-lg-12">
+              <h1 class="page-header">{{ ticket_name }}
+                  <small>Ticket ID: {{ asset_id }}</small>
+              </h1>
+          </div>
+      </div>
+      <!-- /.row -->
+
+      <!-- Portfolio Item Row -->
+      <div class="row">
+
+          <div class="col-md-8">
+              <img class="img-responsive" src="{{ image }}" alt="">
+          </div>
+
+          <div class="col-md-4">
+              <h3>Ticket Owner</h3>
+              <p>{{ bitcoin_address }}</p>
+              <h3>Ticket Description</h3>
+              <p>{{ description }}</p>
+              <h3>Ticket Details</h3>
+              <ul>
+                  <li>Price: ${{ price }}</li>
+              </ul>
+
+              <hr>
+
+              <form class="form-horizontal" action="" method="post">
+                <p><input type="hidden" placeholder="Bitcoin Address" name="bitcoin_address" value={{ bitcoin_address }}></p>
+                <p><input type="hidden" placeholder="Asset ID" name="asset_id" value={{ asset_id }}></p>
+                <p><input type="hidden" placeholder="Ticket Price" name="ticket_price" value={{ price }}></p>
+                <p><input type="hidden" VALUE="1" SIZE="1" placeholder="1" name="transfer_amount" value="{{request.form.transfer_amount}}"></p>
+                <p><input class="btn btn-custom" type="submit" value="Buy One Ticket"></p>
+              </form>
+              {% if error %}
+                <p class="error"><strong>Error:</strong> {{ error }}</p>
+              {% endif %}
+          </div>
+
+      </div>
+      <!-- /.row -->
+
+      <hr>
+
+  </div>
+  <!-- /.container -->
 </body>
 
 {% endblock %}
