@@ -5,7 +5,7 @@ from bitcoin import *
 from passlib.hash import sha256_crypt
 import requests
 from flask_mail import Mail, Message
-import json
+import simplejson as json
 
 with open('config.json') as data_file:
     data = json.load(data_file)
