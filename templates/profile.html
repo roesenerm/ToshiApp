@@ -10,22 +10,16 @@
           <div class="col-md-8">
 
               <h2 class="page-header">
-                  Transactions
+                  My Tickets
               </h2>
 
-              {% for tx in utxos %}
+              {% for a in assets %}
 
-                <!-- First Transaction  -->
-                <h3>Transaction ID: {{ tx.txid }}</h3>
-                {% for a in tx.assets %}
-                  <h3>
-                      Ticket ID: <a href="/{{a.assetId}}">{{ a.assetId }}</a>
-                  </h3>
-                  <h3>
-                      Ticket I Own: {{ a.amount }}
-                  </h3>
-                  <hr>
-                {% endfor %}
+                <!-- Assets  -->
+                <h3>
+                    Ticket ID: <a href="/{{a}}">{{ a }}</a>
+                </h3>
+                <h3>Tickets I Own: {{ assets[a] }}</h3>
 
               {% endfor %}
 

@@ -456,10 +456,20 @@ def profile():
 	r = requests.get('http://testnet.api.coloredcoins.org:80/v3/addressinfo/'+my_address)
 	response = r.json()
 	bitcoin_address = response['address']
+	assets = {}
 	utxos = response['utxos']
-	return render_template('profile.html', my_address=my_address, wallet_addr=wallet_addr, utxos=utxos, error=error)
+	for tx in utxos:
+		for a in tx['assets']:
+			assetId = a['assetId']
+			amount = a['amount']
+			if assetId not in assets:
+				assets[assetId] = amount
+			else:
+				new_amount = amount + assets[assetId]
+				assets[assetId] = new_amount
+	return render_template('profile.html', my_address=my_address, wallet_addr=wallet_addr, assets=assets, error=error)
 
 if __name__ == '__main__':
-	#app.run(debug=True)
-	app.run()
+	app.run(debug=True)
+	#app.run()
 
