@@ -5,24 +5,32 @@ from bitcoin import *
 from passlib.hash import sha256_crypt
 import requests
 from flask_mail import Mail, Message
+import json
+
+with open('config.json') as data_file:
+    data = json.load(data_file)
+
+secret_key = data['secret_key']
+mail_password = data['gmail_password']
+db_password = data['db_password']
 
 app = Flask(__name__)
 
-app.secret_key = 'password'
+app.secret_key = secret_key
 
 app.config['MAIL_SERVER'] = 'smtp.gmail.com'
 app.config['MAIL_PORT'] = 465
 app.config['MAIL_USE_TLS'] = False
 app.config['MAIL_USE_SSL'] = True
 app.config['MAIL_USERNAME'] = 'ticket.toshi@gmail.com'
-app.config['MAIL_PASSWORD'] = 'toshihawaii'
+app.config['MAIL_PASSWORD'] = mail_password
 
 mail = Mail(app)
 
 def connect():
 	connection = MongoClient('ds049935.mlab.com', 49935)
 	handle = connection['dbfour']
-	handle.authenticate('matthewroesener', 'toshihawaii')
+	handle.authenticate('matthewroesener', db_password)
 	return handle
 
 handle = connect()
