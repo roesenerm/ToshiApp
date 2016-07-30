@@ -221,7 +221,6 @@ def issue():
 		image = request.form['image']
 		ticket_price = float(request.form['ticket_price'])
 		ticket_name = request.form['ticket_name']
-		passphrase = request.form['private_key']
 		payload = {
 			'issueAddress':my_address,
 			'amount':issued_amount,
@@ -239,27 +238,24 @@ def issue():
         		}
     		}
 		}
-		if sha256_crypt.verify(str(passphrase), str(accounts.find_one({'username':username})['password'])) == False:
-			error = 'Invalid private passphrase. Please try again.'
-		else:
-			r = requests.post('http://testnet.api.coloredcoins.org:80/v3/issue', data=json.dumps(payload), headers={'Content-Type':'application/json'})
-			response = r.json()
-			if str(r) == '<Response [200]>':
-				tx_key = accounts.find_one({'username':username})['priv']
-				tx_hex = str(response['txHex'])
-				asset_id = response['assetId']
-				signed_tx = sign_tx(tx_hex, tx_key)
-				tx_id = broadcast_tx(signed_tx)
-				# Version dbthree
-				#posts.insert({'bitcoin_address':my_address, 'asset_id':asset_id, 'tx_id':tx_id})
-				# Version dbfour
-				if tx_id:
-					posts.insert({'bitcoin_address':my_address, 'issued_amount':issued_amount, 'asset_id':asset_id, 'tx_id':tx_id, 'ticket_name':ticket_name, 'description':description, 'ticket_price':ticket_price, 'image':image})
-					return render_template('issuance.html', ticket_name=ticket_name, image=image, ticket_price=ticket_price, description=description, issued_amount=issued_amount)
-				else:
-					error = 'Error issuing ticket'
+		r = requests.post('http://testnet.api.coloredcoins.org:80/v3/issue', data=json.dumps(payload), headers={'Content-Type':'application/json'})
+		response = r.json()
+		if str(r) == '<Response [200]>':
+			tx_key = accounts.find_one({'username':username})['priv']
+			tx_hex = str(response['txHex'])
+			asset_id = response['assetId']
+			signed_tx = sign_tx(tx_hex, tx_key)
+			tx_id = broadcast_tx(signed_tx)
+			# Version dbthree
+			#posts.insert({'bitcoin_address':my_address, 'asset_id':asset_id, 'tx_id':tx_id})
+			# Version dbfour
+			if tx_id:
+				posts.insert({'bitcoin_address':my_address, 'issued_amount':issued_amount, 'asset_id':asset_id, 'tx_id':tx_id, 'ticket_name':ticket_name, 'description':description, 'ticket_price':ticket_price, 'image':image})
+				return render_template('issuance.html', ticket_name=ticket_name, image=image, ticket_price=ticket_price, description=description, issued_amount=issued_amount)
 			else:
-				error = 'Error issuing ticket. Not enough funds to cover issue.'
+				error = 'Error issuing ticket'
+		else:
+			error = 'Error issuing ticket. Not enough funds to cover issue.'
 	return render_template('issue.html', error=error)
 
 def swap(my_address, ticket_price, from_address, wallet_addr, asset_id, transfer_amount, issuer_private_key, buyer_private_key):
@@ -339,26 +335,22 @@ def transfer():
 		asset_id = str(request.form['asset_id'])
 		transfer_amount = int(request.form['transfer_amount'])
 		to_address = str(request.form['to_bitcoin_address'])
-		passphrase = str(request.form['private_key'])
-		if sha256_crypt.verify(str(passphrase), str(accounts.find_one({'username':username})['password'])) == False:
-			error = 'Invalid Private Passphrase. Please try again.'
-		else:
-			private_key = accounts.find_one({'username':username})['priv']
-			payload = {'fee': 5000, 'from': [from_address], 'to':[{'address':to_address,'amount': transfer_amount, 'assetId' : asset_id}]}
-			r = requests.post('http://testnet.api.coloredcoins.org:80/v3/sendasset', data=json.dumps(payload), headers={'Content-Type':'application/json'})
-			response = r.json()
-			if r.status_code == 200:
-				try: 
-					tx_hex = str(response['txHex'])
-					tx_key = private_key
-					signed_tx = sign_tx(tx_hex, tx_key)
-					tx_id = broadcast_tx(signed_tx)
-				except:
-					error = "Error transferring asset"
-				return render_template("transfer_asset.html", tx_id=tx_id, error=error)
-			else:
+		private_key = accounts.find_one({'username':username})['priv']
+		payload = {'fee': 5000, 'from': [from_address], 'to':[{'address':to_address,'amount': transfer_amount, 'assetId' : asset_id}]}
+		r = requests.post('http://testnet.api.coloredcoins.org:80/v3/sendasset', data=json.dumps(payload), headers={'Content-Type':'application/json'})
+		response = r.json()
+		if r.status_code == 200:
+			try: 
+				tx_hex = str(response['txHex'])
+				tx_key = private_key
+				signed_tx = sign_tx(tx_hex, tx_key)
+				tx_id = broadcast_tx(signed_tx)
+			except:
 				error = "Error transferring asset"
-				return render_template("transfer_asset.html", error=error)
+			return render_template("transfer_asset.html", tx_id=tx_id, error=error)
+		else:
+			error = "Error transferring asset"
+			return render_template("transfer_asset.html", error=error)
 	return render_template("transfer.html", posts=posts, error=error)
 
 @app.route('/check_ticket_issuer', methods=['GET', 'POST'])
