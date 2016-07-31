@@ -41,7 +41,6 @@ def login_required(f):
 		if 'logged_in' in session:
 			return f(*args, **kwargs)
 		else:
-			flash('You need to login first.')
 			return redirect(url_for('login'))
 	return wrap
 
@@ -50,16 +49,17 @@ def login_required(f):
 def login():
 	error = None
 	if request.method == 'POST':
-		username = request.form['username']
+		email = request.form['email']
 		brainwallet_password = request.form['brainwallet_password']
-		if accounts.find_one({'username':username}) == None:
+		if accounts.find_one({'email':email}) == None:
 			error = 'Invalid credentials. Please try again. Have you created an account?'
 		else:
-			if sha256_crypt.verify(str(brainwallet_password), str(accounts.find_one({'username':username})['password'])) == False:
+			if sha256_crypt.verify(str(brainwallet_password), str(accounts.find_one({'email':email})['password'])) == False:
 				error = 'Invalid credentials. Please try again.'
 			else:
 				session['logged_in'] = True
-				session['username'] = username
+				my_address = accounts.find_one({'email':email})['my_address']
+				session['my_address'] = my_address
 				return redirect(url_for('explore'))
 	return render_template("login.html", error=error)
 
@@ -67,7 +67,8 @@ def login():
 @login_required
 def logout():
 	session.pop('logged_in', None)
-	flash('You were just logged out!')
+	session.pop('my_address', None)
+	session.pop('_flashes', None)
 	return redirect(url_for('home'))
 
 def create_account(brainwallet_password):
@@ -87,17 +88,17 @@ def create_account(brainwallet_password):
 def signup():
 	error = None
 	if request.method == 'POST':
-		username = request.form['username']
+		email = request.form['email']
 		brainwallet_password = request.form['brainwallet_password']
 		confirm_brainwallet_password = request.form['confirm_brainwallet_password']
 		if brainwallet_password != confirm_brainwallet_password:
 			error = 'Passwords not the same. Please try again.'
 		else:
 			priv, addr, password_on_server, wallet_priv, wallet_addr = create_account(brainwallet_password)
-			accounts.insert({'username':username, 'priv':priv, 'my_address':addr, 'password':password_on_server, 'wallet_addr':wallet_addr})
+			accounts.insert({'email':email, 'priv':priv, 'my_address':addr, 'password':password_on_server, 'wallet_addr':wallet_addr})
 			session['logged_in'] = True
-			session['username'] = username
-			msg = Message('ToshiTicket Account', sender='ticket.toshi@gmail.com', recipients=[username])
+			session['my_address'] = addr
+			msg = Message('ToshiTicket Account', sender='ticket.toshi@gmail.com', recipients=[email])
 			msg.html = render_template('account_email.html', addr=addr, wallet_addr=wallet_addr, wallet_priv=wallet_priv)
 			mail.send(msg)
 		return redirect(url_for('explore'))
@@ -212,9 +213,7 @@ def broadcast_tx(signed_tx):
 @login_required
 def issue():
 	error = None
-	username = session['username']
-	session_user = accounts.find_one({'username':username})
-	my_address = session_user['my_address']
+	my_address = session['my_address']
 	if request.method == 'POST':
 		issued_amount = request.form['issued_amount']
 		description = request.form['description']
@@ -241,7 +240,7 @@ def issue():
 		r = requests.post('http://testnet.api.coloredcoins.org:80/v3/issue', data=json.dumps(payload), headers={'Content-Type':'application/json'})
 		response = r.json()
 		if str(r) == '<Response [200]>':
-			tx_key = accounts.find_one({'username':username})['priv']
+			tx_key = accounts.find_one({'my_address':my_address})['priv']
 			tx_hex = str(response['txHex'])
 			asset_id = response['assetId']
 			signed_tx = sign_tx(tx_hex, tx_key)
@@ -328,14 +327,14 @@ def get_address_balance(address):
 @app.route('/transfer', methods=['GET', 'POST'])
 @login_required
 def transfer():
-	username = session['username']
+	my_address = session['my_address']
 	error = None
 	if request.method == 'POST':
 		from_address = str(request.form['from_bitcoin_address'])
 		asset_id = str(request.form['asset_id'])
 		transfer_amount = int(request.form['transfer_amount'])
 		to_address = str(request.form['to_bitcoin_address'])
-		private_key = accounts.find_one({'username':username})['priv']
+		private_key = accounts.find_one({'my_address':my_address})['priv']
 		payload = {'fee': 5000, 'from': [from_address], 'to':[{'address':to_address,'amount': transfer_amount, 'assetId' : asset_id}]}
 		r = requests.post('http://testnet.api.coloredcoins.org:80/v3/sendasset', data=json.dumps(payload), headers={'Content-Type':'application/json'})
 		response = r.json()
@@ -401,9 +400,8 @@ def ticket_id(asset_id):
 	bitcoin_address = None
 	image = None
 	price = None
-	username = session['username']
-	session_user = accounts.find_one({'username':username})
-	my_address = session_user['my_address']
+	my_address = session['my_address']
+	session_user = accounts.find_one({'my_address':my_address})
 	buyer_private_key = session_user['priv']
 	if posts.find_one({'asset_id':asset_id}) == None:
 		error = 'No asset ID found.'
@@ -441,9 +439,8 @@ def ticket_id(asset_id):
 @login_required
 def profile():
 	error = None
-	username = session['username']
-	session_user = accounts.find_one({'username':username})
-	my_address = session_user['my_address']
+	my_address = session['my_address']
+	session_user = accounts.find_one({'my_address':my_address})
 	wallet_addr = session_user['wallet_addr']
 	r = requests.get('http://testnet.api.coloredcoins.org:80/v3/addressinfo/'+my_address)
 	response = r.json()
@@ -462,6 +459,6 @@ def profile():
 	return render_template('profile.html', my_address=my_address, wallet_addr=wallet_addr, assets=assets, error=error)
 
 if __name__ == '__main__':
-	app.run(debug=True)
-	#app.run()
+	#app.run(debug=True)
+	app.run()
 
