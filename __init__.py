@@ -71,9 +71,8 @@ def logout():
 	session.pop('_flashes', None)
 	return redirect(url_for('home'))
 
-def create_account(brainwallet_password):
-	password_on_server = sha256_crypt.encrypt(brainwallet_password)
-	priv = sha256(password_on_server)
+def create_account():
+	priv = random_key()
 	pub = privtopub(priv)
 	addr = pubtoaddr(pub, 111)
 
@@ -81,7 +80,7 @@ def create_account(brainwallet_password):
 	wallet_pub = privtopub(wallet_priv)
 	wallet_addr = pubtoaddr(wallet_pub, 111)
 
-	return priv, addr, password_on_server, wallet_priv, wallet_addr
+	return priv, addr, wallet_priv, wallet_addr
 
 # Sign up using a sha256 encrpyted brain wallet password
 @app.route('/signup', methods=['GET', 'POST'])
@@ -94,7 +93,8 @@ def signup():
 		if brainwallet_password != confirm_brainwallet_password:
 			error = 'Passwords not the same. Please try again.'
 		else:
-			priv, addr, password_on_server, wallet_priv, wallet_addr = create_account(brainwallet_password)
+			password_on_server = sha256_crypt.encrypt(brainwallet_password)
+			priv, addr, wallet_priv, wallet_addr = create_account()
 			accounts.insert({'email':email, 'priv':priv, 'my_address':addr, 'password':password_on_server, 'wallet_addr':wallet_addr})
 			session['logged_in'] = True
 			session['my_address'] = addr
