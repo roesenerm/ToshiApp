@@ -104,14 +104,6 @@ def signup():
 		return redirect(url_for('explore'))
 	return render_template('signup.html', error=error)
 
-# Beta Page
-@app.route('/beta_sign_up', methods=['GET', 'POST'])
-def beta_sign_up():
-	if request.method == 'POST':
-		email = request.form['email']
-		beta_emails.insert({'email':email})
-	return render_template('beta_sign_up.html')
-
 # Cover Page
 @app.route('/')
 #@login_required
