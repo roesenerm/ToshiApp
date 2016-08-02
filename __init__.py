@@ -69,7 +69,7 @@ def logout():
 	session.pop('logged_in', None)
 	session.pop('my_address', None)
 	session.pop('_flashes', None)
-	return redirect(url_for('home'))
+	return redirect(url_for('login'))
 
 def create_account():
 	priv = random_key()
