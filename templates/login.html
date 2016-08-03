@@ -1,13 +1,60 @@
 {% extends "template.html" %}
 {% block body %}
 
+<!-- Custom styles for this template -->
+<style type="text/css">
+  .main {
+    max-width: 320px;
+    margin: 0 auto;
+  }
+  .login-or {
+    position: relative;
+    font-size: 18px;
+    color: #aaa;
+    margin-top: 10px;
+    margin-bottom: 10px;
+    padding-top: 10px;
+    padding-bottom: 10px;
+  }
+  .span-or {
+    display: block;
+    position: absolute;
+    left: 50%;
+    top: -2px;
+    margin-left: -25px;
+    background-color: #fff;
+    width: 50px;
+    text-align: center;
+  }
+  .hr-or {
+    background-color: #cdcdcd;
+    height: 1px;
+    margin-top: 0px !important;
+    margin-bottom: 0px !important;
+  }
+  h3 {
+    text-align: center;
+    line-height: 300%;
+  }
+</style>
 <body>
     <!-- Custom styles for this template -->
     <link href="static/css/signin.css" rel="stylesheet">
 
     <div class="container">
       <form class="form-signin" action="" method="post">
-        <h2 class="form-signin-heading">Please Login</h2>
+        <center><h2 class="form-signin-heading">Please Login</h2></center>
+        <br>
+        <div class="row">
+            <div class="col-xs-12 col-sm-12 col-md-12">
+              <a href="/login-twitter" class="btn btn-lg btn-custom btn-block">Login with Twitter</a>
+            </div>
+        </div>
+        <br>
+        <div class="login-or">
+            <hr class="hr-or">
+            <span class="span-or">or</span>
+        </div>
         <br>
         <input type="text" class="form-control" name="email" value="{{request.form.email}}" placeholder="Email address" required autofocus>
         <br>
@@ -16,7 +63,6 @@
         <button class="btn btn-lg btn-custom btn-block" type="submit">Login</button>
         <br>
         <!---<a href="{{auth_url}}" class="btn btn-lg btn-custom btn-block">Login With Coinbase</a>-->
-        <br>
         <a href="/signup">Sign Up Here</a>
         <br>
         {% if error %}

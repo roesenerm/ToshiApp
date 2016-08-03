@@ -5,10 +5,16 @@ from bitcoin import *
 from passlib.hash import sha256_crypt
 import requests
 from flask_mail import Mail, Message
+from flask_oauth import OAuth
+import twitter as twt
 
 secret_key = 'password'
 mail_password = 'toshihawaii'
 db_password = 'toshihawaii'
+twitter_consumer_key = 'QGfCEMuL6LljLKaUnDuUn2MLX'
+twitter_consumer_secret = 'KJqXrKyZRae6DhcsO5eeDSnWKVTb2Uo4jZmbqxbBw7dCnjoUhT'
+twitter_access_token_key = '38103557-knPDcfVgVk9viHNStLZicPlBc9dHFb9v6KbEbOKoq'
+twitter_access_token_secret = 'zJTn4JlQzwwNcxH6KGO10AKQwcMNnTFOtSxi3EjoUB9MI'
 
 app = Flask(__name__)
 
@@ -23,6 +29,27 @@ app.config['MAIL_PASSWORD'] = mail_password
 
 mail = Mail(app)
 
+oauth = OAuth()
+twitter = oauth.remote_app('twitter',
+    base_url='https://api.twitter.com/1/',
+    request_token_url='https://api.twitter.com/oauth/request_token',
+    access_token_url='https://api.twitter.com/oauth/access_token',
+    authorize_url='https://api.twitter.com/oauth/authenticate',
+    consumer_key=twitter_consumer_key,
+    consumer_secret=twitter_consumer_secret
+)
+
+def send_welcome(username, user_id, addr, wallet_addr, wallet_priv):
+	access_token_key = twitter_access_token_key
+	access_token_secret = twitter_access_token_secret
+	consumer_key = twitter_consumer_key
+	consumer_secret = twitter_consumer_secret
+	api = twt.Api(consumer_key, consumer_secret, access_token_key, access_token_secret)
+	welcome = api.PostDirectMessage(text="Welcome to ToshiTicket! Fund your account address with btc now to start issuing tickets!", user_id=user_id, screen_name=username)
+	account = api.PostDirectMessage(text="Your Account Address: " + addr, user_id=user_id, screen_name=username)
+	wallet = api.PostDirectMessage(text="Your Wallet Address: " + wallet_addr, user_id=user_id, screen_name=username)
+	private = api.PostDirectMessage(text="Your Private Address: " + wallet_priv, user_id=user_id, screen_name=username)
+
 def connect():
 	connection = MongoClient('ds049935.mlab.com', 49935)
 	handle = connection['dbfour']
@@ -32,7 +59,49 @@ def connect():
 handle = connect()
 accounts = handle.accounts
 posts = handle.posts
-beta_emails = handle.beta_emails
+
+@app.errorhandler(500)
+def page_not_found(e):
+    return render_template('500.html'), 500
+
+@app.route('/login-twitter')
+def login_twitter():
+	return twitter.authorize(callback=url_for('oauth_authorized',
+		next=request.args.get('next') or request.referrer or None))
+
+@app.route('/oauth-authorized')
+@twitter.authorized_handler
+def oauth_authorized(resp):
+    next_url = request.args.get('next') or url_for('explore')
+    if resp is None:
+        return redirect(next_url)
+    elif accounts.find_one({'twitter_user_id':resp['user_id']}) == None:
+    	priv, addr, wallet_priv, wallet_addr = create_account()
+    	accounts.insert({'twitter_screen_name':resp['screen_name'], 'twitter_user_id':resp['user_id'], 'email':None, 'priv':priv, 'my_address':addr, 'password':None, 'wallet_addr':wallet_addr})
+    	session['twitter_token'] = (
+    		resp['oauth_token'],
+    		resp['oauth_token_secret']
+    	)
+    	session['logged_in'] = True
+    	session['my_address'] = addr
+    	send_welcome(resp['screen_name'], resp['user_id'], addr, wallet_addr, wallet_priv)
+    	return redirect(url_for('explore'))
+    else:
+    	session['twitter_token'] = (
+    		resp['oauth_token'],
+    		resp['oauth_token_secret']
+    		)
+    	session['logged_in'] = True
+    	session_user = accounts.find_one({'twitter_user_id':resp['user_id']})
+    	my_address = session_user['my_address']
+    	session['my_address'] = my_address
+    	return redirect(url_for('explore'))
+
+@twitter.tokengetter
+def get_twitter_token(token=None):
+	if 'twitter_token' in session:
+		del session['twitter_token']
+	return session.get('twitter_token')
 
 # Login required function that locks pages and asks for login credentials
 def login_required(f):
@@ -69,6 +138,7 @@ def logout():
 	session.pop('logged_in', None)
 	session.pop('my_address', None)
 	session.pop('_flashes', None)
+	session.pop('twitter_token', None)
 	return redirect(url_for('login'))
 
 def create_account():
@@ -93,15 +163,18 @@ def signup():
 		if brainwallet_password != confirm_brainwallet_password:
 			error = 'Passwords not the same. Please try again.'
 		else:
-			password_on_server = sha256_crypt.encrypt(brainwallet_password)
-			priv, addr, wallet_priv, wallet_addr = create_account()
-			accounts.insert({'email':email, 'priv':priv, 'my_address':addr, 'password':password_on_server, 'wallet_addr':wallet_addr})
-			session['logged_in'] = True
-			session['my_address'] = addr
-			msg = Message('ToshiTicket Account', sender='ticket.toshi@gmail.com', recipients=[email])
-			msg.html = render_template('account_email.html', addr=addr, wallet_addr=wallet_addr, wallet_priv=wallet_priv)
-			mail.send(msg)
-		return redirect(url_for('explore'))
+			if accounts.find_one({'email':email}) == None:
+				password_on_server = sha256_crypt.encrypt(brainwallet_password)
+				priv, addr, wallet_priv, wallet_addr = create_account()
+				accounts.insert({'twitter_screen_name':None, 'twitter_user_id':None, 'email':email, 'priv':priv, 'my_address':addr, 'password':password_on_server, 'wallet_addr':wallet_addr})
+				session['logged_in'] = True
+				session['my_address'] = addr
+				msg = Message('ToshiTicket Account', sender='ticket.toshi@gmail.com', recipients=[email])
+				msg.html = render_template('account_email.html', addr=addr, wallet_addr=wallet_addr, wallet_priv=wallet_priv)
+				mail.send(msg)
+				return redirect(url_for('explore'))
+			else:
+				error = 'Looks like there already is an account with that email. Please try again.'
 	return render_template('signup.html', error=error)
 
 # Cover Page
@@ -451,6 +524,6 @@ def profile():
 	return render_template('profile.html', my_address=my_address, wallet_addr=wallet_addr, assets=assets, error=error)
 
 if __name__ == '__main__':
-	#app.run(debug=True)
-	app.run()
+	app.run(debug=True)
+	#app.run()
 
