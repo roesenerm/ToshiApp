@@ -66,6 +66,8 @@ def page_not_found(e):
 
 @app.route('/login-twitter')
 def login_twitter():
+	if 'twitter_token' in session:
+		del session['twitter_token']
 	return twitter.authorize(callback=url_for('oauth_authorized',
 		next=request.args.get('next') or request.referrer or None))
 
