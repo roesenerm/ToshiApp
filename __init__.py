@@ -60,9 +60,9 @@ handle = connect()
 accounts = handle.accounts
 posts = handle.posts
 
-#@app.errorhandler(500)
-#def page_not_found(e):
-#    return render_template('500.html'), 500
+@app.errorhandler(500)
+def page_not_found(e):
+    return render_template('500.html'), 500
 
 @app.route('/login-twitter')
 def login_twitter():
@@ -524,6 +524,6 @@ def profile():
 	return render_template('profile.html', my_address=my_address, wallet_addr=wallet_addr, assets=assets, error=error)
 
 if __name__ == '__main__':
-	app.run(debug=True)
-	#app.run()
+	#app.run(debug=True)
+	app.run()
 
