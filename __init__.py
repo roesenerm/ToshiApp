@@ -91,7 +91,7 @@ def recieve_token():
 			account_id = get_account['data'][0]['id']
 			get_address = client.create_address(account_id)
 			wallet_addr = get_address['address']
-			coinbase_accounts.insert_one({'my_address':my_address, 'coinbase_user_id':user_id, 'wallet_addr':wallet_addr})
+			coinbase_accounts.insert({'my_address':my_address, 'coinbase_user_id':user_id, 'wallet_addr':wallet_addr})
 			return redirect(url_for('profile'))
 		else:
 			return redirect(url_for('profile'))
@@ -113,7 +113,7 @@ def oauth_authorized(resp):
         return redirect(next_url)
     elif accounts.find_one({'twitter_user_id':resp['user_id']}) == None:
     	priv, addr = create_account()
-    	accounts.insert_one({'twitter_screen_name':resp['screen_name'], 'twitter_user_id':resp['user_id'], 'email':None, 'priv':priv, 'my_address':addr, 'password':None})
+    	accounts.insert({'twitter_screen_name':resp['screen_name'], 'twitter_user_id':resp['user_id'], 'email':None, 'priv':priv, 'my_address':addr, 'password':None})
     	session['twitter_token'] = (
     		resp['oauth_token'],
     		resp['oauth_token_secret']
@@ -198,7 +198,7 @@ def signup():
 			if accounts.find_one({'email':email}) == None:
 				password_on_server = sha256_crypt.encrypt(brainwallet_password)
 				priv, addr = create_account()
-				accounts.insert_one({'twitter_screen_name':None, 'twitter_user_id':None, 'email':email, 'priv':priv, 'my_address':addr, 'password':password_on_server})
+				accounts.insert({'twitter_screen_name':None, 'twitter_user_id':None, 'email':email, 'priv':priv, 'my_address':addr, 'password':password_on_server})
 				session['logged_in'] = True
 				session['my_address'] = addr
 				msg = Message('ToshiTicket Account', sender='ticket.toshi@gmail.com', recipients=[email])
@@ -343,10 +343,10 @@ def issue():
 			signed_tx = sign_tx(tx_hex, tx_key)
 			tx_id = broadcast_tx(signed_tx)
 			# Version dbthree
-			#posts.insert_one({'bitcoin_address':my_address, 'asset_id':asset_id, 'tx_id':tx_id})
+			#posts.insert({'bitcoin_address':my_address, 'asset_id':asset_id, 'tx_id':tx_id})
 			# Version dbfour
 			if tx_id:
-				posts.insert_one({'bitcoin_address':my_address, 'issued_amount':issued_amount, 'asset_id':asset_id, 'tx_id':tx_id, 'ticket_name':ticket_name, 'description':description, 'ticket_price':ticket_price, 'image':image})
+				posts.insert({'bitcoin_address':my_address, 'issued_amount':issued_amount, 'asset_id':asset_id, 'tx_id':tx_id, 'ticket_name':ticket_name, 'description':description, 'ticket_price':ticket_price, 'image':image})
 				return render_template('issuance.html', ticket_name=ticket_name, image=image, ticket_price=ticket_price, description=description, issued_amount=issued_amount)
 			else:
 				error = 'Error issuing ticket'
