@@ -236,7 +236,7 @@ def search():
 			tx_id = post['tx_id'][0]['txid']
 			for index in range(0,5):
 				utxo = tx_id+':'+str(index)
-				endpoint = 'http://testnet.api.coloredcoins.org:80/v3/assetmetadata/'+asset_id+'/'+utxo
+				endpoint = 'http://api.coloredcoins.org:80/v3/assetmetadata/'+asset_id+'/'+utxo
 				r = requests.get(endpoint)
 				if (r.status_code) != 200:
 					pass
@@ -266,7 +266,7 @@ def explore():
 		tx_id = post['tx_id'][0]['txid']
 		for index in range(0,5):
 			utxo = tx_id+':'+str(index)
-			endpoint = 'http://testnet.api.coloredcoins.org:80/v3/assetmetadata/'+asset_id+'/'+utxo
+			endpoint = 'http://api.coloredcoins.org:80/v3/assetmetadata/'+asset_id+'/'+utxo
 			r = requests.get(endpoint)
 			if (r.status_code) != 200:
 				pass
@@ -299,7 +299,7 @@ def sign_tx(tx_hex, tx_key):
 
 def broadcast_tx(signed_tx):
 	payload = { 'txHex':signed_tx }
-	r = requests.post('http://testnet.api.coloredcoins.org:80/v3/broadcast', data=json.dumps(payload), headers={'Content-Type':'application/json'})
+	r = requests.post('http://api.coloredcoins.org:80/v3/broadcast', data=json.dumps(payload), headers={'Content-Type':'application/json'})
 	response = r.json()
 	tx_id = response['txid']
 	# Need to check output
@@ -334,7 +334,7 @@ def issue():
         		}
     		}
 		}
-		r = requests.post('http://testnet.api.coloredcoins.org:80/v3/issue', data=json.dumps(payload), headers={'Content-Type':'application/json'})
+		r = requests.post('http://api.coloredcoins.org:80/v3/issue', data=json.dumps(payload), headers={'Content-Type':'application/json'})
 		response = r.json()
 		if str(r) == '<Response [200]>':
 			tx_key = accounts.find_one({'my_address':my_address})['priv']
@@ -384,7 +384,7 @@ def transfer_asset(from_address, to_address, transfer_amount, asset_id, tx_key):
 	error = None
 	tx_id = None
 	payload = {'fee':5000, 'from':[from_address], 'to':[{'address':to_address, 'amount':transfer_amount, 'assetId':asset_id}]}
-	r = requests.post('http://testnet.api.coloredcoins.org:80/v3/sendasset', data=json.dumps(payload), headers={'Content-Type':'application/json'})
+	r = requests.post('http://api.coloredcoins.org:80/v3/sendasset', data=json.dumps(payload), headers={'Content-Type':'application/json'})
 	response = r.json()
 	if r.status_code == 200:
 		try:
@@ -428,7 +428,7 @@ def transfer():
 		to_address = str(request.form['to_bitcoin_address'])
 		private_key = accounts.find_one({'my_address':my_address})['priv']
 		payload = {'fee': 5000, 'from': [from_address], 'to':[{'address':to_address,'amount': transfer_amount, 'assetId' : asset_id}]}
-		r = requests.post('http://testnet.api.coloredcoins.org:80/v3/sendasset', data=json.dumps(payload), headers={'Content-Type':'application/json'})
+		r = requests.post('http://api.coloredcoins.org:80/v3/sendasset', data=json.dumps(payload), headers={'Content-Type':'application/json'})
 		response = r.json()
 		if r.status_code == 200:
 			try: 
@@ -450,7 +450,7 @@ def check_ticket_issuer():
 	error = None
 	if request.method == 'POST':
 		public_address = request.form['from_public_address']
-		r = requests.get('http://testnet.api.coloredcoins.org:80/v3/addressinfo/'+public_address)
+		r = requests.get('http://api.coloredcoins.org:80/v3/addressinfo/'+public_address)
 		response = r.json()
 		bitcoin_address = response['address']
 		utxos = response['utxos']
@@ -467,7 +467,7 @@ def check_ticket():
 		tx_id = request.form['tx_id']
 		for index in range(0,5):
 			utxo = tx_id + ':' + str(index)
-			endpoint = 'http://testnet.api.coloredcoins.org:80/v3/assetmetadata/' + asset_id + '/' + utxo
+			endpoint = 'http://api.coloredcoins.org:80/v3/assetmetadata/' + asset_id + '/' + utxo
 			r = requests.get(endpoint)
 			if (r.status_code) != 200:
 				error = 'Incorrect Ticket ID or Transaction ID'
@@ -502,7 +502,7 @@ def ticket_id(asset_id):
 		tx_id = data['tx_id'][0]['txid']
 		for index in range(0,5):
 			utxo = tx_id + ':' + str(index)
-			endpoint = 'http://testnet.api.coloredcoins.org:80/v3/assetmetadata/' + asset_id + '/' + utxo
+			endpoint = 'http://api.coloredcoins.org:80/v3/assetmetadata/' + asset_id + '/' + utxo
 			r = requests.get(endpoint)
 			if (r.status_code) != 200:
 				pass
@@ -545,7 +545,7 @@ def profile():
 	else:
 		wallet_addr = None
 
-	r = requests.get('http://testnet.api.coloredcoins.org:80/v3/addressinfo/'+my_address)
+	r = requests.get('http://api.coloredcoins.org:80/v3/addressinfo/'+my_address)
 	response = r.json()
 	bitcoin_address = response['address']
 	assets = {}
