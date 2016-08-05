@@ -31,14 +31,22 @@
               <!-- Blog Categories Well -->
               <div class="well">
                   <h4>My Account Address: {{my_address}}</h4>
-                  <p>Fund this account with testnet bitcoins <a href="http://tpfaucet.appspot.com/">here</a> to issue tickets.</p>
+                  <p>Fund this account with bitcoins to buy and issue tickets.</p>
               </div>
 
+              {% if wallet_addr == None %}
               <!-- Side Widget Well -->
               <div class="well">
-                  <h4>My Wallet Address: {{wallet_addr}}</h4>
+                  <p>Please setup a coinbase acccount.</p>
+              </div>
+              <a href="{{auth_url}}" class="btn btn-lg btn-custom btn-block">Setup Coinbase Account</a>
+              {% else %}
+              <!-- Side Widget Well -->
+              <div class="well">
+                  <h4>My Coinbase Address: {{wallet_addr}}</h4>
                   <p>This is where we send your bitcoins for tickets you have sold.</p>
               </div>
+              {% endif %}
 
           </div>
 

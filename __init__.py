@@ -7,14 +7,20 @@ import requests
 from flask_mail import Mail, Message
 from flask_oauth import OAuth
 import twitter as twt
+from coinbase.wallet.client import OAuthClient
 
 secret_key = 'password'
 mail_password = 'toshihawaii'
 db_password = 'toshihawaii'
+
 twitter_consumer_key = 'QGfCEMuL6LljLKaUnDuUn2MLX'
 twitter_consumer_secret = 'KJqXrKyZRae6DhcsO5eeDSnWKVTb2Uo4jZmbqxbBw7dCnjoUhT'
 twitter_access_token_key = '38103557-knPDcfVgVk9viHNStLZicPlBc9dHFb9v6KbEbOKoq'
 twitter_access_token_secret = 'zJTn4JlQzwwNcxH6KGO10AKQwcMNnTFOtSxi3EjoUB9MI'
+
+coinbase_client_id = '344e57a2b573015a9cde6d995b5c87143522703fd8aafe5dea54733608a0f9da'
+coinbase_client_secret = 'e4c7183f6981ab3ef989c42caae972e39331a654a139d55ae621d0440dd2e06c'
+coinbase_your_callback_url = 'http://toshiticket.com/consumer_auth'
 
 app = Flask(__name__)
 
@@ -39,7 +45,7 @@ twitter = oauth.remote_app('twitter',
     consumer_secret=twitter_consumer_secret
 )
 
-def send_welcome(username, user_id, addr, wallet_addr, wallet_priv):
+def send_welcome(username, user_id, addr):
 	access_token_key = twitter_access_token_key
 	access_token_secret = twitter_access_token_secret
 	consumer_key = twitter_consumer_key
@@ -47,8 +53,6 @@ def send_welcome(username, user_id, addr, wallet_addr, wallet_priv):
 	api = twt.Api(consumer_key, consumer_secret, access_token_key, access_token_secret)
 	welcome = api.PostDirectMessage(text="Welcome to ToshiTicket! Fund your account address with btc now to start issuing tickets!", user_id=user_id, screen_name=username)
 	account = api.PostDirectMessage(text="Your Account Address: " + addr, user_id=user_id, screen_name=username)
-	wallet = api.PostDirectMessage(text="Your Wallet Address: " + wallet_addr, user_id=user_id, screen_name=username)
-	private = api.PostDirectMessage(text="Your Private Address: " + wallet_priv, user_id=user_id, screen_name=username)
 
 def connect():
 	connection = MongoClient('ds049935.mlab.com', 49935)
@@ -58,7 +62,39 @@ def connect():
 
 handle = connect()
 accounts = handle.accounts
+coinbase_accounts = handle.coinbase_accounts
 posts = handle.posts
+
+@app.route('/consumer_auth')
+def recieve_token():
+	oauth_code = request.args['code']
+	url = 'https://www.coinbase.com/oauth/token?grant_type=authorization_code&code='+oauth_code+'&redirect_uri='+coinbase_your_callback_url+'&client_id='+coinbase_client_id+'&client_secret='+coinbase_client_secret
+	r = requests.post(url)
+	data = r.json()
+	access_token = data['access_token']
+	refresh_token = data['refresh_token']
+
+	if access_token == None:
+		return redirect(url_for('profile'))
+
+	else:
+		url = 'https://api.coinbase.com/v2/user'
+		r = requests.get(url, headers={'Authorization':'Bearer ' + access_token})
+		response = r.json()
+		user_id = response['data']['id']
+		my_address = session['my_address']
+		if coinbase_accounts.find_one({'my_address':my_address}) == None:
+			client = OAuthClient(access_token, refresh_token)
+			get_user = client.get_current_user()
+			email = get_user['email']
+			get_account = client.get_accounts()
+			account_id = get_account['data'][0]['id']
+			get_address = client.create_address(account_id)
+			wallet_addr = get_address['address']
+			coinbase_accounts.insert_one({'my_address':my_address, 'coinbase_user_id':user_id, 'wallet_addr':wallet_addr})
+			return redirect(url_for('profile'))
+		else:
+			return redirect(url_for('profile'))
 
 @app.errorhandler(500)
 def page_not_found(e):
@@ -76,15 +112,15 @@ def oauth_authorized(resp):
     if resp is None:
         return redirect(next_url)
     elif accounts.find_one({'twitter_user_id':resp['user_id']}) == None:
-    	priv, addr, wallet_priv, wallet_addr = create_account()
-    	accounts.insert({'twitter_screen_name':resp['screen_name'], 'twitter_user_id':resp['user_id'], 'email':None, 'priv':priv, 'my_address':addr, 'password':None, 'wallet_addr':wallet_addr})
+    	priv, addr = create_account()
+    	accounts.insert_one({'twitter_screen_name':resp['screen_name'], 'twitter_user_id':resp['user_id'], 'email':None, 'my_address':addr, 'password':None})
     	session['twitter_token'] = (
     		resp['oauth_token'],
     		resp['oauth_token_secret']
     	)
     	session['logged_in'] = True
     	session['my_address'] = addr
-    	send_welcome(resp['screen_name'], resp['user_id'], addr, wallet_addr, wallet_priv)
+    	send_welcome(resp['screen_name'], resp['user_id'], addr)
     	return redirect(url_for('explore'))
     else:
     	session['twitter_token'] = (
@@ -146,11 +182,7 @@ def create_account():
 	pub = privtopub(priv)
 	addr = pubtoaddr(pub, 111)
 
-	wallet_priv = random_key()
-	wallet_pub = privtopub(wallet_priv)
-	wallet_addr = pubtoaddr(wallet_pub, 111)
-
-	return priv, addr, wallet_priv, wallet_addr
+	return priv, addr
 
 # Sign up using a sha256 encrpyted brain wallet password
 @app.route('/signup', methods=['GET', 'POST'])
@@ -165,12 +197,12 @@ def signup():
 		else:
 			if accounts.find_one({'email':email}) == None:
 				password_on_server = sha256_crypt.encrypt(brainwallet_password)
-				priv, addr, wallet_priv, wallet_addr = create_account()
-				accounts.insert({'twitter_screen_name':None, 'twitter_user_id':None, 'email':email, 'priv':priv, 'my_address':addr, 'password':password_on_server, 'wallet_addr':wallet_addr})
+				priv, addr = create_account()
+				accounts.insert_one({'twitter_screen_name':None, 'twitter_user_id':None, 'email':email, 'priv':priv, 'my_address':addr, 'password':password_on_server, 'wallet_addr':wallet_addr})
 				session['logged_in'] = True
 				session['my_address'] = addr
 				msg = Message('ToshiTicket Account', sender='ticket.toshi@gmail.com', recipients=[email])
-				msg.html = render_template('account_email.html', addr=addr, wallet_addr=wallet_addr, wallet_priv=wallet_priv)
+				msg.html = render_template('account_email.html', addr=addr)
 				mail.send(msg)
 				return redirect(url_for('explore'))
 			else:
@@ -311,10 +343,10 @@ def issue():
 			signed_tx = sign_tx(tx_hex, tx_key)
 			tx_id = broadcast_tx(signed_tx)
 			# Version dbthree
-			#posts.insert({'bitcoin_address':my_address, 'asset_id':asset_id, 'tx_id':tx_id})
+			#posts.insert_one({'bitcoin_address':my_address, 'asset_id':asset_id, 'tx_id':tx_id})
 			# Version dbfour
 			if tx_id:
-				posts.insert({'bitcoin_address':my_address, 'issued_amount':issued_amount, 'asset_id':asset_id, 'tx_id':tx_id, 'ticket_name':ticket_name, 'description':description, 'ticket_price':ticket_price, 'image':image})
+				posts.insert_one({'bitcoin_address':my_address, 'issued_amount':issued_amount, 'asset_id':asset_id, 'tx_id':tx_id, 'ticket_name':ticket_name, 'description':description, 'ticket_price':ticket_price, 'image':image})
 				return render_template('issuance.html', ticket_name=ticket_name, image=image, ticket_price=ticket_price, description=description, issued_amount=issued_amount)
 			else:
 				error = 'Error issuing ticket'
@@ -345,7 +377,7 @@ def swap(my_address, ticket_price, from_address, wallet_addr, asset_id, transfer
 		else:
 			error = 'Not enough funds to purchase ticket.'
 	except:
-		error = 'Not enough funds to pruchase ticket.'
+		error = 'Not enough funds to purchase ticket.'
 	return asset_tx_id, btc_tx_id, error
 
 def transfer_asset(from_address, to_address, transfer_amount, asset_id, tx_key):
@@ -494,19 +526,29 @@ def ticket_id(asset_id):
 			transfer_amount = int(request.form['transfer_amount'])
 			issuer = accounts.find_one({'my_address':from_address})
 			issuer_private_key = issuer['priv']
-			wallet_addr = issuer['wallet_addr']
-			asset_tx_id, btc_tx_id, error = swap(my_address=my_address, ticket_price=ticket_price, from_address=from_address, wallet_addr=wallet_addr, asset_id=asset_id, transfer_amount=transfer_amount, issuer_private_key=issuer_private_key, buyer_private_key=buyer_private_key)
-			if error == None:
-				return render_template("buy.html", asset_tx_id=asset_tx_id, btc_tx_id=btc_tx_id)
+			if coinbase_accounts.find_one({'my_address':from_address}):
+				wallet = coinbase_accounts.find_one({'my_address':from_address})
+				wallet_addr = wallet['wallet_addr']
+				asset_tx_id, btc_tx_id, error = swap(my_address=my_address, ticket_price=ticket_price, from_address=from_address, wallet_addr=wallet_addr, asset_id=asset_id, transfer_amount=transfer_amount, issuer_private_key=issuer_private_key, buyer_private_key=buyer_private_key)
+				if error == None:
+					return render_template("buy.html", asset_tx_id=asset_tx_id, btc_tx_id=btc_tx_id)
+				else:
+					return render_template("ticket.html", asset_id=asset_id, bitcoin_address=bitcoin_address, ticket_name=ticket_name, description=description, image=image, price=price, error=error)
 	return render_template("ticket.html", asset_id=asset_id, bitcoin_address=bitcoin_address, ticket_name=ticket_name, description=description, image=image, price=price, error=error)
 
 @app.route('/profile', methods=['GET', 'POST'])
 @login_required
 def profile():
 	error = None
+	auth_url = 'https://www.coinbase.com/oauth/authorize?response_type=code&client_id='+coinbase_client_id+'&redirect_uri='+coinbase_your_callback_url+'&scope=wallet:user:read,wallet:accounts:read,wallet:addresses:create,wallet:user:email'
 	my_address = session['my_address']
-	session_user = accounts.find_one({'my_address':my_address})
-	wallet_addr = session_user['wallet_addr']
+
+	if coinbase_accounts.find_one({'my_address':my_address}):
+		wallet = coinbase_accounts.find_one({'my_address':my_address})
+		wallet_addr = wallet['wallet_addr']
+	else:
+		wallet_addr = None
+
 	r = requests.get('http://testnet.api.coloredcoins.org:80/v3/addressinfo/'+my_address)
 	response = r.json()
 	bitcoin_address = response['address']
@@ -521,7 +563,7 @@ def profile():
 			else:
 				new_amount = amount + assets[assetId]
 				assets[assetId] = new_amount
-	return render_template('profile.html', my_address=my_address, wallet_addr=wallet_addr, assets=assets, error=error)
+	return render_template('profile.html', my_address=my_address, wallet_addr=wallet_addr, auth_url=auth_url, assets=assets, error=error)
 
 if __name__ == '__main__':
 	#app.run(debug=True)
