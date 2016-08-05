@@ -180,7 +180,7 @@ def logout():
 def create_account():
 	priv = random_key()
 	pub = privtopub(priv)
-	addr = pubtoaddr(pub, 111)
+	addr = pubtoaddr(pub)
 
 	return priv, addr
 
@@ -411,14 +411,9 @@ def send_btc(send_to, ticket_price_satoshis, send_from, tx_key):
 	return tx_id, error
 
 def get_address_balance(address):
-	balance = None
-	endpoint = 'http://testnet.api.coloredcoins.org:80/v3/addressinfo/' + address
-	r = requests.get(endpoint)
-	if (r.status_code) != 200:
-		pass
-	else:
-		response = r.json()
-		balance = response['utxos'][0]['value']
+	r = requests.get("https://blockchain.info/address/"+address+"?format=json")
+	response = r.json()
+	balance = response["final_balance"]
 	return balance
 
 @app.route('/transfer', methods=['GET', 'POST'])
@@ -542,6 +537,7 @@ def profile():
 	error = None
 	auth_url = 'https://www.coinbase.com/oauth/authorize?response_type=code&client_id='+coinbase_client_id+'&redirect_uri='+coinbase_your_callback_url+'&scope=wallet:user:read,wallet:accounts:read,wallet:addresses:create,wallet:user:email'
 	my_address = session['my_address']
+	my_address_balance = get_address_balance(my_address)
 
 	if coinbase_accounts.find_one({'my_address':my_address}):
 		wallet = coinbase_accounts.find_one({'my_address':my_address})
@@ -563,7 +559,7 @@ def profile():
 			else:
 				new_amount = amount + assets[assetId]
 				assets[assetId] = new_amount
-	return render_template('profile.html', my_address=my_address, wallet_addr=wallet_addr, auth_url=auth_url, assets=assets, error=error)
+	return render_template('profile.html', my_address=my_address, my_address_balance=my_address_balance, wallet_addr=wallet_addr, auth_url=auth_url, assets=assets, error=error)
 
 if __name__ == '__main__':
 	#app.run(debug=True)
