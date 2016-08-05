@@ -113,7 +113,7 @@ def oauth_authorized(resp):
         return redirect(next_url)
     elif accounts.find_one({'twitter_user_id':resp['user_id']}) == None:
     	priv, addr = create_account()
-    	accounts.insert_one({'twitter_screen_name':resp['screen_name'], 'twitter_user_id':resp['user_id'], 'email':None, 'my_address':addr, 'password':None})
+    	accounts.insert_one({'twitter_screen_name':resp['screen_name'], 'twitter_user_id':resp['user_id'], 'email':None, 'priv':priv, 'my_address':addr, 'password':None})
     	session['twitter_token'] = (
     		resp['oauth_token'],
     		resp['oauth_token_secret']
@@ -198,7 +198,7 @@ def signup():
 			if accounts.find_one({'email':email}) == None:
 				password_on_server = sha256_crypt.encrypt(brainwallet_password)
 				priv, addr = create_account()
-				accounts.insert_one({'twitter_screen_name':None, 'twitter_user_id':None, 'email':email, 'priv':priv, 'my_address':addr, 'password':password_on_server, 'wallet_addr':wallet_addr})
+				accounts.insert_one({'twitter_screen_name':None, 'twitter_user_id':None, 'email':email, 'priv':priv, 'my_address':addr, 'password':password_on_server})
 				session['logged_in'] = True
 				session['my_address'] = addr
 				msg = Message('ToshiTicket Account', sender='ticket.toshi@gmail.com', recipients=[email])
