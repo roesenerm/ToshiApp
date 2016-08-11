@@ -353,6 +353,10 @@ def issue():
 			'amount':issued_amount,
 			'divisibility':0,
 			'fee':5000,
+			'transfer': [{
+		    	'address': my_address,
+		    	'amount': issued_amount
+		    }],
 			'metadata': {
         		'assetName': ticket_name,
         		'issuer': my_address,
@@ -412,7 +416,26 @@ def swap(buyer_address, buyer_wallet_addr, ticket_price, issuer_address, issuer_
 def transfer_asset(from_address, to_address, transfer_amount, asset_id, tx_key):
 	error = None
 	tx_id = None
-	payload = {'fee':5000, 'from':[from_address], 'to':[{'address':to_address, 'amount':transfer_amount, 'assetId':asset_id}]}
+	r = requests.get('http://api.coloredcoins.org:80/v3/addressinfo/'+from_address)
+	response = r.json()
+	utxos = response['utxos']
+	for tx in utxos:
+		for a in tx['assets']:
+			if a['assetId'] == asset_id:
+				total_assets = a['amount']
+	remainder = total_assets - transfer_amount
+	payload = {
+			'fee': 5000,
+			'from': [from_address],
+			'to':[{
+				'address': to_address,
+				'amount': transfer_amount, 
+				'assetId': asset_id},
+				{
+				'address': from_address,
+				'amount': remainder, 
+				'assetId': asset_id}
+				]}
 	r = requests.post('http://api.coloredcoins.org:80/v3/sendasset', data=json.dumps(payload), headers={'Content-Type':'application/json'})
 	response = r.json()
 	if r.status_code == 200:
@@ -455,15 +478,35 @@ def get_address_balance(address):
 def transfer():
 	my_address = session['my_address']
 	error = None
+	tx_id = None
 	if request.method == 'POST':
-		from_address = str(request.form['from_bitcoin_address'])
 		asset_id = str(request.form['asset_id'])
 		transfer_amount = int(request.form['transfer_amount'])
 		to_address = str(request.form['to_bitcoin_address'])
-		private_key = accounts.find_one({'my_address':my_address})['priv']
-		payload = {'fee': 5000, 'from': [from_address], 'to':[{'address':to_address,'amount': transfer_amount, 'assetId' : asset_id}]}
+		private_key = accounts.find_one({'my_address': my_address})['priv']
+		r = requests.get('http://api.coloredcoins.org:80/v3/addressinfo/'+my_address)
+		response = r.json()
+		utxos = response['utxos']
+		for tx in utxos:
+			for a in tx['assets']:
+				if a['assetId'] == asset_id:
+					total_assets = a['amount']
+		remainder = total_assets - transfer_amount
+		payload = {
+				'fee': 5000,
+				'from': [my_address],
+				'to':[{
+					'address': to_address,
+					'amount': transfer_amount, 
+					'assetId': asset_id},
+					{
+					'address': my_address,
+					'amount': remainder, 
+					'assetId': asset_id}
+					]}
 		r = requests.post('http://api.coloredcoins.org:80/v3/sendasset', data=json.dumps(payload), headers={'Content-Type':'application/json'})
 		response = r.json()
+		print (response)
 		if r.status_code == 200:
 			try: 
 				tx_hex = str(response['txHex'])
@@ -473,9 +516,6 @@ def transfer():
 			except:
 				error = "Error transferring ticket"
 			return render_template("transfer_asset.html", tx_id=tx_id, error=error)
-		else:
-			error = "Error transferring ticket"
-			return render_template("transfer_asset.html", error=error)
 	return render_template("transfer.html", posts=posts, error=error)
 
 @app.route('/check_ticket_issuer', methods=['GET', 'POST'])
