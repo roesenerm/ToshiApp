@@ -3,14 +3,15 @@
     <body>
 
     	<div class="container">
-    		<h1>Transfer Complete</h1>
+    		<h1>Transfer Ticket</h1>
     		<br>
         	<p>Transaction ID: {{tx_id}}</p>
 
+            {% if error %}
+            <p class="error"><strong>Error:</strong> {{ error }}</p>
+            {% endif %}
+
     	</div>
-    	{% if error %}
-			<p class="error"><strong>Error:</strong> {{ error }}</p>
-		{% endif %}
 
     </body>
 

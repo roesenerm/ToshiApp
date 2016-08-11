@@ -21,6 +21,7 @@ twitter_access_token_secret = 'zJTn4JlQzwwNcxH6KGO10AKQwcMNnTFOtSxi3EjoUB9MI'
 coinbase_client_id = '344e57a2b573015a9cde6d995b5c87143522703fd8aafe5dea54733608a0f9da'
 coinbase_client_secret = 'e4c7183f6981ab3ef989c42caae972e39331a654a139d55ae621d0440dd2e06c'
 coinbase_your_callback_url = 'http://toshiticket.com/consumer_auth'
+coinbase_your_callback_url_ticket = 'http://127.0.0.1:5000/consumer_auth_ticket'
 
 app = Flask(__name__)
 
@@ -92,13 +93,43 @@ def recieve_token():
 			get_address = client.create_address(account_id)
 			wallet_addr = get_address['address']
 			coinbase_accounts.insert({'my_address':my_address, 'coinbase_user_id':user_id, 'wallet_addr':wallet_addr})
-			return redirect(url_for('profile'))
-		else:
-			return redirect(url_for('profile'))
+		return redirect(url_for('profile'))
 
-@app.errorhandler(500)
-def page_not_found(e):
-    return render_template('500.html'), 500
+@app.route('/consumer_auth_ticket')
+def recieve_token_ticket():
+	oauth_code = request.args['code']
+	url = 'https://www.coinbase.com/oauth/token?grant_type=authorization_code&code='+oauth_code+'&redirect_uri='+coinbase_your_callback_url_ticket+'&client_id='+coinbase_client_id+'&client_secret='+coinbase_client_secret
+	r = requests.post(url)
+	data = r.json()
+	access_token = data['access_token']
+	refresh_token = data['refresh_token']
+
+	if access_token == None:
+		return redirect(url_for('explore'))
+
+	else:
+		transaction = session['transaction']
+		issuer_address = transaction['issuer_address']
+		issuer_private_key = accounts.find_one({'my_address':issuer_address})['priv']
+		issuer_wallet_addr = coinbase_accounts.find_one({'my_address':issuer_address})['wallet_addr']
+
+		buyer_address = session['my_address']
+		buyer_wallet_addr = coinbase_accounts.find_one({'my_address':buyer_address})['wallet_addr']
+
+		asset_id = transaction['asset_id']
+		transfer_amount = transaction['transfer_amount']
+		ticket_price = posts.find_one({'asset_id':asset_id})['ticket_price']
+		asset_tx_id, btc_tx_id, error = swap(buyer_address=buyer_address, buyer_wallet_addr=buyer_wallet_addr, ticket_price=ticket_price, issuer_address=issuer_address, issuer_wallet_addr=issuer_wallet_addr, asset_id=asset_id, transfer_amount=transfer_amount, issuer_private_key=issuer_private_key, access_token=access_token, refresh_token=refresh_token)
+		if error == None:
+			session.pop('transaction', None)
+			return render_template("buy.html", asset_tx_id=asset_tx_id, btc_tx_id=btc_tx_id)
+
+		session.pop('transaction', None)
+		return redirect(url_for('explore'))
+
+#@app.errorhandler(500)
+#def page_not_found(e):
+#    return render_template('500.html'), 500
 
 @app.route('/login-twitter')
 def login_twitter():
@@ -354,7 +385,7 @@ def issue():
 			error = 'Error issuing ticket. Not enough funds to cover issue.'
 	return render_template('issue.html', error=error)
 
-def swap(my_address, ticket_price, from_address, wallet_addr, asset_id, transfer_amount, issuer_private_key, buyer_private_key):
+def swap(buyer_address, buyer_wallet_addr, ticket_price, issuer_address, issuer_wallet_addr, asset_id, transfer_amount, issuer_private_key, access_token, refresh_token):
 	error = None
 	asset_tx_id = None
 	btc_tx_id = None
@@ -365,19 +396,17 @@ def swap(my_address, ticket_price, from_address, wallet_addr, asset_id, transfer
 		btc_usd_rate = response['bpi']['USD']['rate']
 		input_amt = ticket_price
 		ticket_price_satoshis = float(input_amt) / float(btc_usd_rate) * 100000000
-		# Remove later
-		ticket_price_satoshis = 5000
-		my_address_satoshis = get_address_balance(my_address)
-		from_address_satoshis = get_address_balance(from_address)
-		if my_address_satoshis > ticket_price_satoshis and from_address_satoshis > 5000:
-			asset_tx_id, error = transfer_asset(from_address=from_address, to_address=my_address, transfer_amount=transfer_amount, asset_id=asset_id, tx_key=issuer_private_key)
-			print ("Bitcoin sent to: ", wallet_addr)
-			#btc_tx_id, error = send_btc(send_to=wallet_addr, ticket_price_satoshis=ticket_price_satoshis, send_from=my_address, tx_key=buyer_private_key)
-			btc_tx_id = True
+		buyer_wallet_addr_satoshis = get_address_balance(buyer_wallet_addr)
+		issuer_address_satoshis = get_address_balance(issuer_address)
+		ticket_price_satoshis = 1000
+		buyer_wallet_addr_satoshis = 10000
+		if buyer_wallet_addr_satoshis > ticket_price_satoshis and issuer_address_satoshis > 5000:
+			asset_tx_id, error = transfer_asset(from_address=issuer_address, to_address=buyer_address, transfer_amount=transfer_amount, asset_id=asset_id, tx_key=issuer_private_key)
+			#btc_tx_id, error = send_btc(send_to=issuer_wallet_addr, ticket_price_satoshis=ticket_price_satoshis, access_token=access_token, refresh_token=refresh_token)
 		else:
-			error = 'Not enough funds to purchase ticket.'
+			error = 'Not enough funds to purchase a ticket.'
 	except:
-		error = 'Not enough funds to purchase ticket.'
+		error = 'Not enough funds to purchase tickets.'
 	return asset_tx_id, btc_tx_id, error
 
 def transfer_asset(from_address, to_address, transfer_amount, asset_id, tx_key):
@@ -397,17 +426,22 @@ def transfer_asset(from_address, to_address, transfer_amount, asset_id, tx_key):
 		error = 'Not enough Satoshis in issuer account to cover sending.'
 	return tx_id, error
 
-def send_btc(send_to, ticket_price_satoshis, send_from, tx_key):
-	error = None
+def send_btc(send_to, ticket_price_satoshis, access_token, refresh_token):
+
+	client = OAuthClient(access_token, refresh_token)
+	account = client.get_primary_account()
+
+	ticket_price_btc = ticket_price_satoshis / 100000000
+
+	print (ticket_price_btc)
+
 	tx_id = None
-	h = history(send_from)
-	outs = [{'value':ticket_price_satoshis, 'address':send_to}]
-	tx_hex = mktx(h, outs)
-	try:
-		signed_tx = sign_tx(tx_hex, tx_key)
-		tx_id = broadcast_tx(signed_tx)
-	except:
-		error = "Error transferring Bitcoin."
+	error = None
+	
+	#try:
+	#	tx_id = account.send_money(to=send_to, amount=ticket_price_btc, currency='BTC')
+	#except:
+	#	error = "Error transferring Bitcoin."
 	return tx_id, error
 
 def get_address_balance(address):
@@ -437,10 +471,10 @@ def transfer():
 				signed_tx = sign_tx(tx_hex, tx_key)
 				tx_id = broadcast_tx(signed_tx)
 			except:
-				error = "Error transferring asset"
+				error = "Error transferring ticket"
 			return render_template("transfer_asset.html", tx_id=tx_id, error=error)
 		else:
-			error = "Error transferring asset"
+			error = "Error transferring ticket"
 			return render_template("transfer_asset.html", error=error)
 	return render_template("transfer.html", posts=posts, error=error)
 
@@ -486,6 +520,8 @@ def check_ticket():
 @app.route('/<asset_id>', methods=['GET', 'POST'])
 @login_required
 def ticket_id(asset_id):
+	session.pop('transaction', None)
+	auth_url_ticket = 'https://www.coinbase.com/oauth/authorize?response_type=code&client_id='+coinbase_client_id+'&redirect_uri='+coinbase_your_callback_url_ticket+'&scope=wallet:user:read,wallet:accounts:read,wallet:addresses:create,wallet:user:email'
 	error = None
 	ticket_name = None
 	description = None
@@ -493,8 +529,6 @@ def ticket_id(asset_id):
 	image = None
 	price = None
 	my_address = session['my_address']
-	session_user = accounts.find_one({'my_address':my_address})
-	buyer_private_key = session_user['priv']
 	if posts.find_one({'asset_id':asset_id}) == None:
 		error = 'No asset ID found.'
 	else:
@@ -515,20 +549,14 @@ def ticket_id(asset_id):
 				price = response['metadataOfIssuence']['data']['userData']['meta'][0]['price']
 				image = response['metadataOfIssuence']['data']['userData']['meta'][1]['image']
 		if request.method == 'POST':
-			from_address = str(request.form['bitcoin_address'])
+			issuer_address = str(request.form['bitcoin_address'])
 			asset_id = str(request.form['asset_id'])
-			ticket_price = str(request.form['ticket_price'])
 			transfer_amount = int(request.form['transfer_amount'])
-			issuer = accounts.find_one({'my_address':from_address})
-			issuer_private_key = issuer['priv']
-			if coinbase_accounts.find_one({'my_address':from_address}):
-				wallet = coinbase_accounts.find_one({'my_address':from_address})
-				wallet_addr = wallet['wallet_addr']
-				asset_tx_id, btc_tx_id, error = swap(my_address=my_address, ticket_price=ticket_price, from_address=from_address, wallet_addr=wallet_addr, asset_id=asset_id, transfer_amount=transfer_amount, issuer_private_key=issuer_private_key, buyer_private_key=buyer_private_key)
-				if error == None:
-					return render_template("buy.html", asset_tx_id=asset_tx_id, btc_tx_id=btc_tx_id)
-				else:
-					return render_template("ticket.html", asset_id=asset_id, bitcoin_address=bitcoin_address, ticket_name=ticket_name, description=description, image=image, price=price, error=error)
+			if coinbase_accounts.find_one({'my_address':my_address}):
+				session['transaction'] = {'issuer_address':issuer_address, 'asset_id':asset_id, 'transfer_amount':transfer_amount}
+				return redirect(auth_url_ticket)
+			else:
+				error = 'Missing a Coinbase account. Please setup a Coinbase account in your profile.'
 	return render_template("ticket.html", asset_id=asset_id, bitcoin_address=bitcoin_address, ticket_name=ticket_name, description=description, image=image, price=price, error=error)
 
 @app.route('/profile', methods=['GET', 'POST'])
@@ -562,6 +590,6 @@ def profile():
 	return render_template('profile.html', my_address=my_address, my_address_balance=my_address_balance, wallet_addr=wallet_addr, auth_url=auth_url, assets=assets, error=error)
 
 if __name__ == '__main__':
-	#app.run(debug=True)
-	app.run()
+	app.run(debug=True)
+	#app.run()
 
