@@ -21,7 +21,7 @@ twitter_access_token_secret = 'zJTn4JlQzwwNcxH6KGO10AKQwcMNnTFOtSxi3EjoUB9MI'
 coinbase_client_id = '344e57a2b573015a9cde6d995b5c87143522703fd8aafe5dea54733608a0f9da'
 coinbase_client_secret = 'e4c7183f6981ab3ef989c42caae972e39331a654a139d55ae621d0440dd2e06c'
 coinbase_your_callback_url = 'http://toshiticket.com/consumer_auth'
-coinbase_your_callback_url_ticket = 'http://127.0.0.1:5000/consumer_auth_ticket'
+coinbase_your_callback_url_ticket = 'http://toshiticket.com/consumer_auth_ticket'
 
 app = Flask(__name__)
 
@@ -127,9 +127,9 @@ def recieve_token_ticket():
 		session.pop('transaction', None)
 		return redirect(url_for('explore'))
 
-@app.errorhandler(500)
-def page_not_found(e):
-    return render_template('500.html'), 500
+#@app.errorhandler(500)
+#def page_not_found(e):
+#    return render_template('500.html'), 500
 
 @app.route('/login-twitter')
 def login_twitter():
@@ -630,6 +630,6 @@ def profile():
 	return render_template('profile.html', my_address=my_address, my_address_balance=my_address_balance, wallet_addr=wallet_addr, auth_url=auth_url, assets=assets, error=error)
 
 if __name__ == '__main__':
-	#app.run(debug=True)
-	app.run()
+	app.run(debug=True)
+	#app.run()
 
