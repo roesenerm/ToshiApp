@@ -127,9 +127,9 @@ def recieve_token_ticket():
 		session.pop('transaction', None)
 		return redirect(url_for('explore'))
 
-#@app.errorhandler(500)
-#def page_not_found(e):
-#    return render_template('500.html'), 500
+@app.errorhandler(500)
+def page_not_found(e):
+    return render_template('500.html'), 500
 
 @app.route('/login-twitter')
 def login_twitter():
@@ -590,6 +590,6 @@ def profile():
 	return render_template('profile.html', my_address=my_address, my_address_balance=my_address_balance, wallet_addr=wallet_addr, auth_url=auth_url, assets=assets, error=error)
 
 if __name__ == '__main__':
-	app.run(debug=True)
-	#app.run()
+	#app.run(debug=True)
+	app.run()
 
